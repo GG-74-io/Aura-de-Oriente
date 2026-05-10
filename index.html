@@ -268,7 +268,7 @@ tbody tr:hover td{background:var(--surf2)}
           <select id="fq-familia" onchange="filterCatalog()"><option value="">Familia</option></select>
           <select id="fq-inspo" onchange="filterCatalog()"><option value="">Inspiraci&#243;n</option></select>
           <select id="fq-uso" onchange="filterCatalog()"><option value="">Uso</option></select>
-          <select id="fq-estado" onchange="filterCatalog()"><option value="">Estado</option><option value="mio">Mi negocio</option><option value="fav">Favorito</option><option value="pros">Prospecto</option><option value="oculto">Ocultos</option><option value="nv">No vendible</option></select>
+          <select id="fq-estado" onchange="filterCatalog()"><option value="">Todos los estados</option><option value="mio">Mi negocio</option><option value="fav">Favorito</option><option value="pros">Prospecto</option><option value="ver">Verificado</option><option value="nv">No vendible</option><option value="oculto">Oculto</option></select>
           <button class="btn btn-outline btn-sm" onclick="clearCatFilter()">Limpiar</button>
         </div>
       </div>
@@ -314,7 +314,7 @@ tbody tr:hover td{background:var(--surf2)}
           <select id="mq-familia" onchange="renderMis()"><option value="">Familia</option></select>
           <select id="mq-inspo" onchange="renderMis()"><option value="">Inspiraci&#243;n</option></select>
           <select id="mq-uso" onchange="renderMis()"><option value="">Uso</option></select>
-          <select id="mq-estado" onchange="renderMis()"><option value="">Estado</option><option value="verificado">Verificado</option><option value="nv">No vendible</option></select>
+          <select id="mq-estado" onchange="renderMis()"><option value="">Todos los estados</option><option value="mio">Mi negocio</option><option value="fav">Favorito</option><option value="pros">Prospecto</option><option value="ver">Verificado</option><option value="nv">No vendible</option><option value="oculto">Oculto</option></select>
           <select id="mq-exist" onchange="renderMis()"><option value="">Todos</option><option value="1">Con existencia</option></select>
           <button class="btn btn-outline btn-sm" onclick="clearMisFilter()">Limpiar</button>
         </div>
@@ -512,7 +512,8 @@ tbody tr:hover td{background:var(--surf2)}
       <div class="sh"><div class="sh-l"><h2>Reportes</h2></div></div>
       <div class="fbar" style="margin-bottom:14px">
         <div class="fbar-r" style="margin-bottom:8px">
-          <div class="seg" style="flex-wrap:wrap">
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;padding-bottom:3px">
+          <div class="seg" style="flex-wrap:nowrap;width:max-content">
             <button class="seg-btn active" onclick="setReporte('compras',this)">Compras</button>
             <button class="seg-btn" onclick="setReporte('pagos-prov',this)">Pagos proveedor</button>
             <button class="seg-btn" onclick="setReporte('ventas',this)">Ventas</button>
@@ -520,7 +521,7 @@ tbody tr:hover td{background:var(--surf2)}
             <button class="seg-btn" onclick="setReporte('inventario',this)">Inventario</button>
             <button class="seg-btn" onclick="setReporte('ranking',this)">Ranking clientes</button>
             <button class="seg-btn" onclick="setReporte('cobranza',this)">Proyecci&#243;n cobranza</button>
-          </div>
+          </div></div>
         </div>
         <div class="fbar-r">
           <input type="date" id="r-desde" onchange="renderReporte()">
@@ -725,7 +726,6 @@ tbody tr:hover td{background:var(--surf2)}
   </div>
   <div class="mfoot">
     <button class="btn btn-danger btn-sm" id="cp-del-btn" style="display:none" onclick="deleteCompra(parseInt(cv('cp-eid')))">Eliminar</button>
-    <button class="btn btn-outline btn-sm" id="cp-hist-btn" style="display:none">&#128203; Historial</button>
     <button class="btn btn-outline" onclick="closeM('m-compra-new')">Cancelar</button>
     <button class="btn btn-gold" onclick="saveCompra()">Registrar pedido</button>
   </div>
@@ -2046,8 +2046,12 @@ function filterCatalog(){
     if(ffa&&!arr(p.familia).includes(ffa))return false;
     if(fi&&p.imarca!==fi)return false;
     if(fu&&!arr(p.uso).includes(fu))return false;
-    if(fe==='mio'&&!p.mio)return false;if(fe==='fav'&&!p.fav)return false;if(fe==='pros'&&!p.pros)return false;
-    if(fe==='oculto'&&!p.oculto)return false;if(fe==='nv'&&!p.no_vendible)return false;
+    if(fe==='mio'&&!p.mio)return false;
+    if(fe==='fav'&&!p.fav)return false;
+    if(fe==='pros'&&!p.pros)return false;
+    if(fe==='ver'&&!p.verificado)return false;
+    if(fe==='nv'&&!p.no_vendible)return false;
+    if(fe==='oculto'&&!p.oculto)return false;
     if(!fe&&p.oculto)return false;
     if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',p.imarca||'',...arr(p.top),...arr(p.cor),...arr(p.fondo)].join(' ').toLowerCase().includes(q))return false;
     return true;
@@ -2161,11 +2165,33 @@ function openDetail(id){
 function editCurDetail(){if(!curDetailId)return;closeM('m-detail');editFromCard(curDetailId);}
 function shareDetailWA(){
   const p=DB.products.find(x=>x.id===curDetailId);if(!p)return;
-  const pir=(arr(p.top).length||arr(p.cor).length||arr(p.fondo).length)?
-    `\n\n_Pir&#225;mide olfativa:_\nSalida: ${arr(p.top).join(', ')}\nCoraz&#243;n: ${arr(p.cor).join(', ')}\nFondo: ${arr(p.fondo).join(', ')}`:'';
-  const msg=`*${p.nombre}* — ${arr(p.marca)[0]||p.marca}\n${p.inombre?'Inspirado en '+p.imarca+' '+p.inombre+'\n':''}\n${p.desc||''}${pir}\n\nPrecio: ${fmt$(p.precio)}\n\nAura de Oriente &#10022;`;
+  const marca=arr(p.marca)[0]||p.marca||'';
+  let msg='';
+  msg+='\u2022 *'+p.nombre+'*\n';
+  msg+='_'+marca+(p.concentracion?' \u00b7 '+p.concentracion:'')+'_\n';
+  if(p.inombre)msg+='\uD83D\uDD0E Inspirado en: '+p.imarca+' '+p.inombre+'\n';
+  if(p.genero)msg+='\n\uD83D\uDC64 G\u00e9nero: '+p.genero;
+  if(arr(p.familia).length)msg+='\n\uD83C\uDF38 Familia: '+arr(p.familia).join(', ');
+  if(arr(p.uso).length)msg+='\n\u2600\uFE0F Uso: '+arr(p.uso).join(', ');
+  if(arr(p.temporada).length)msg+='\n\uD83C\uDF42 Temporada: '+arr(p.temporada).join(', ');
+  if(p.desc)msg+='\n\n'+p.desc;
+  const hasPir=arr(p.top).length||arr(p.cor).length||arr(p.fondo).length;
+  if(hasPir){
+    msg+='\n\n\uD83C\uDF3F *Pir\u00e1mide olfativa*';
+    if(arr(p.top).length)msg+='\nSalida: '+arr(p.top).join(', ');
+    if(arr(p.cor).length)msg+='\nCoraz\u00f3n: '+arr(p.cor).join(', ');
+    if(arr(p.fondo).length)msg+='\nFondo: '+arr(p.fondo).join(', ');
+  }
+  if(p.dur)msg+='\n\n\u23F1 Duraci\u00f3n: '+p.dur;
+  if(p.proy)msg+=' \u2022 Proyecci\u00f3n: '+p.proy;
+  if(p.extra)msg+='\n'+p.extra;
+  msg+='\n\n\uD83D\uDCB0 *Precio: '+fmt$(p.precio)+'*';
+  const imgs=(p.imgs&&p.imgs.length)?p.imgs:(p.img_url?[{url:p.img_url}]:[]);
+  if(imgs.length)msg+='\n\n\uD83D\uDCF7 Im\u00e1genes:\n'+imgs.slice(0,3).map((img,i)=>'  '+(i+1)+'. '+img.url).join('\n');
+  msg+='\n\n\u272A _Aura de Oriente_';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
+
 function shareDetailIG(){toastMsg('Captura la ficha para compartir en Instagram','ok');}
 
 // ═══════════════════════════════════════════════════════════
@@ -2327,8 +2353,12 @@ function renderMis(){
     if(ffa&&!arr(p.familia).includes(ffa))return false;
     if(fi&&p.imarca!==fi)return false;
     if(fu&&!arr(p.uso).includes(fu))return false;
-    if(fe==='verificado'&&!p.verificado)return false;
+    if(fe==='mio'&&!p.mio)return false;
+    if(fe==='fav'&&!p.fav)return false;
+    if(fe==='pros'&&!p.pros)return false;
+    if(fe==='ver'&&!p.verificado)return false;
     if(fe==='nv'&&!p.no_vendible)return false;
+    if(fe==='oculto'&&!p.oculto)return false;
     if(ex==='1'&&getExistenciaForProd(p.id)<=0)return false;
     if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||''].join(' ').toLowerCase().includes(q))return false;
     return true;
@@ -2720,7 +2750,7 @@ function renderInv(){
       <td style="font-size:11px;color:${mrg>=40?'var(--ok)':mrg>=20?'var(--warn)':'var(--err)'}">${mrg}%</td>
       <td style="white-space:nowrap">
         <button class="btn btn-outline btn-sm" onclick="editInv(${i.id})">&#9999;</button>
-        <button class="btn btn-outline btn-sm" onclick="openInvDet(${i.id})">&#128203;</button>
+        ${(i.ajustes&&i.ajustes.length)?`<button class="btn btn-outline btn-sm" onclick="openHistorialInv(${i.id})" title="Historial">&#128203;</button>`:''}
       </td>
     </tr>`);
   });
@@ -2762,6 +2792,12 @@ function toggleConsig(){
   $$('consig-form').style.display=consigOn?'block':'none';
 }
 
+function syncMioFromInventory(){
+  DB.products.forEach(p=>{
+    const ex=DB.inventory.filter(i=>i.pid===p.id).reduce((s,i)=>s+getExistencia(i),0);
+    if(ex>0&&!p.mio)p.mio=true;
+  });
+}
 async function saveInv(){
   const pid=parseInt(cv('inv-prod'));if(!pid){toastMsg('Selecciona un producto','err');return;}
   const prod=DB.products.find(p=>p.id===pid);if(!prod){toastMsg('Producto no encontrado','err');return;}
@@ -2799,7 +2835,7 @@ async function saveInv(){
     DB.inventory.push(inv);
     toastMsg('Inventario agregado','ok');
   }
-  saveDB();markPending();await saveToGoogle();closeM('m-inv');renderInv();calcAlerts();
+  syncMioFromInventory();saveDB();markPending();await saveToGoogle();closeM('m-inv');renderInv();calcAlerts();renderCatalog();
 }
 
 async function deleteInvLine(){
@@ -2813,7 +2849,7 @@ async function deleteInvLine(){
 
 function openInvDet(id){
   const i=DB.inventory.find(x=>x.id===id);if(!i)return;
-  const html=`<div <div style="background:var(--surf);border-radius:var(--r);padding:18px;border:.5px solid var(--bord2)">class="mhdr"><h3>${i.nombre} ${i.tipo} ${i.pres}</h3><button class="mx" onclick="closeM('m-inv-det')">\u2715</button></div>
+  const html=`<div style="background:var(--surf);border-radius:var(--r);padding:18px;border:.5px solid var(--bord2)"><div class="mhdr"><h3>${i.nombre} ${i.tipo} ${i.pres}</h3><button class="mx" onclick="closeM('m-inv-det')">\u2715</button></div>
     <div style="overflow-y:auto;max-height:65vh">
     <div class="sc-row">
       <div class="sc"><div class="sc-l">Stock propio</div><div class="sc-v">${i.stock}</div></div>
@@ -2878,8 +2914,10 @@ function renderCompras(){
       <td>${pill}</td>
       <td style="font-size:11px">${c.fechaRec?fmtDate(c.fechaRec):'—'}</td>
       <td style="white-space:nowrap">
-        ${c.estado!=='recibido'?`<button class="btn btn-ok btn-sm" onclick="recibirCompra(${c.id})">Recibir</button>`:''}
         <button class="btn btn-outline btn-sm" onclick="editCompra(${c.id})">&#9999;</button>
+        ${c.estado!=='recibido'?`<button class="btn btn-ok btn-sm" onclick="recibirCompra(${c.id})">Recibir</button>`:''}
+        ${(c.historial&&c.historial.length)?`<button class="btn btn-outline btn-sm" onclick="openCompraHistorial(${c.id})" title="Historial">&#128203;</button>`:''}
+        ${c.estado!=='recibido'?`<button class="btn btn-danger btn-sm" onclick="deleteCompra(${c.id})" title="Eliminar pedido">&#128465;</button>`:''}
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="10"><div class="empty"><p>Sin compras</p></div></td></tr>';
@@ -2918,7 +2956,11 @@ async function saveCompra(){
       historial:[{fecha:TODAY,tipo:'creacion',cambios:'Pedido creado',motivo:'Registro inicial'}]});
     toastMsg('Compra registrada','ok');
   }
-  sv('cp-eid','');saveDB();markPending();await saveToGoogle();closeM('m-compra-new');renderCompras();
+  sv('cp-eid','');
+  const _cpd=$$('cp-del-btn');if(_cpd)_cpd.style.display='none';
+  const _cpr=$$('cp-razon-row');if(_cpr)_cpr.style.display='none';
+  saveDB();closeM('m-compra-new');renderCompras();
+  markPending();await saveToGoogle();
 }
 
 function editCompra(id){
@@ -2934,30 +2976,86 @@ function editCompra(id){
   // Show razón field and delete button
   const rf=$$('cp-razon-row');if(rf)rf.style.display='block';
   const db2=$$('cp-del-btn');if(db2)db2.style.display='inline-flex';
-  const hb=$$('cp-hist-btn');if(hb){hb.style.display='inline-flex';hb.onclick=()=>openCompraHistorial(parseInt(cv('cp-eid')));}
   $$('m-compra-new').classList.add('open');
 }
-function openCompraHistorial(id){
-  const c=DB.purchases.find(x=>x.id===id);if(!c)return;
-  const hist=(c.historial||[]);
-  const html='<div style="background:var(--surf);border-radius:var(--r);padding:18px;width:min(520px,100%)">'
-    +'<div class="mhdr"><h3>Historial — '+c.producto+'</h3><button class="mx" onclick="closeM(\'m-inv-det\')">\u00d7</button></div>'
-    +'<div style="overflow-y:auto;max-height:60vh">'
+function openHistorialModal(title,hist,columns){
+  const html='<div style="background:var(--surf);border-radius:var(--r);padding:18px;width:min(560px,100%)">'
+    +'<div class="mhdr"><h3>'+title+'</h3><button class="mx" onclick="closeM(\'m-inv-det\')">\u00d7</button></div>'
+    +'<div style="overflow-x:auto;overflow-y:auto;max-height:60vh">'
     +(!hist.length?'<div class="empty"><p>Sin historial</p></div>'
-      :'<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Cambios</th><th>Motivo</th></tr></thead><tbody>'
-      +hist.slice().reverse().map(h=>'<tr><td style="font-size:11px">'+fmtDate(h.fecha)+'</td>'
-        +'<td><span class="tag">'+h.tipo+'</span></td>'
-        +'<td style="font-size:11px">'+h.cambios+'</td>'
-        +'<td style="font-size:11px;color:var(--mist)">'+h.motivo+'</td></tr>').join('')
+      :'<table><thead><tr>'+columns.map(c=>'<th>'+c.label+'</th>').join('')+'</tr></thead><tbody>'
+      +hist.slice().reverse().map(h=>'<tr>'+columns.map(c=>'<td style="font-size:11px">'+(h[c.key]!==undefined?h[c.key]:'')+'</td>').join('')+'</tr>').join('')
       +'</tbody></table>')
     +'</div><div class="mfoot"><button class="btn btn-outline" onclick="closeM(\'m-inv-det\')">Cerrar</button></div></div>';
   $$('m-inv-det').innerHTML=html;openM('m-inv-det');
 }
+function openCompraHistorial(id){
+  const c=DB.purchases.find(x=>x.id===id);if(!c)return;
+  openHistorialModal('Historial — '+c.producto,c.historial||[],[
+    {key:'fecha',label:'Fecha'},{key:'tipo',label:'Tipo'},
+    {key:'cambios',label:'Cambios'},{key:'motivo',label:'Motivo'}
+  ]);
+}
+function openHistorialInv(id){
+  const i=DB.inventory.find(x=>x.id===id);if(!i)return;
+  const hist=i.ajustes||[];
+  const consigBlock=i.consig
+    ?'<div style="background:rgba(42,95,95,.07);border:.5px solid rgba(42,95,95,.2);border-radius:var(--rs);padding:8px 12px;font-size:12px;margin-bottom:10px">'
+     +'<strong>Consignación activa</strong><br>'
+     +'Proveedor: '+(i.cprov||'—')+' · Comisión: '+(i.ccom||0)+'%'
+     +(i.cvenc?' · Vence: '+fmtDate(i.cvenc):'')
+     +'<br>Uds. consig: '+(i.cuds||0)+' · P.venta: '+fmt$(i.cprecio||0)
+     +(i.ccond?' · Cond: '+i.ccond:'')
+     +'</div>'
+    :'';
+  const html='<div style="background:var(--surf);border-radius:var(--r);padding:18px;border:.5px solid var(--bord2);width:min(560px,100%)">'
+    +'<div class="mhdr"><h3>'+i.nombre+' '+i.tipo+' '+i.pres+'</h3><button class="mx" onclick="closeM(\'m-inv-det\')">×</button></div>'
+    +'<div class="sc-row" style="margin-bottom:10px">'
+    +'<div class="sc sc-ok"><div class="sc-l">Stock</div><div class="sc-v">'+i.stock+'</div></div>'
+    +(i.consig?'<div class="sc sc-teal"><div class="sc-l">Consig.</div><div class="sc-v">'+(i.cuds||0)+'</div></div>':'')
+    +'<div class="sc sc-err"><div class="sc-l">Comprometidas</div><div class="sc-v">'+(i.comprometidas||0)+'</div></div>'
+    +'<div class="sc"><div class="sc-l">Existencia</div><div class="sc-v">'+getExistencia(i)+'</div></div>'
+    +'</div>'
+    +consigBlock
+    +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Historial de ajustes</div>'
+    +'<div style="overflow-x:auto;overflow-y:auto;max-height:45vh">'
+    +(!hist.length?'<div class="empty"><p>Sin ajustes</p></div>'
+      :'<table><thead><tr><th>Fecha</th><th>Antes</th><th>Después</th><th>Dif.</th><th>Motivo</th></tr></thead><tbody>'
+      +hist.slice().reverse().map(a=>'<tr>'
+        +'<td style="font-size:11px">'+fmtDate(a.fecha)+'</td>'
+        +'<td style="text-align:right">'+a.stockAntes+'</td>'
+        +'<td style="text-align:right">'+a.stockDespues+'</td>'
+        +'<td style="text-align:right;font-weight:500;color:'+(a.diferencia>=0?'var(--ok)':'var(--err)')+'">'+(a.diferencia>=0?'+':'')+a.diferencia+'</td>'
+        +'<td style="font-size:11px;color:var(--mist)">'+(a.motivo||'')+'</td>'
+        +'</tr>').join('')
+      +'</tbody></table>')
+    +'</div><div class="mfoot"><button class="btn btn-outline" onclick="closeM(\'m-inv-det\')">Cerrar</button></div></div>';
+  $$('m-inv-det').innerHTML=html;openM('m-inv-det');
+}
+function openHistorialVenta(id){
+  const v=DB.sales.find(x=>x.id===id);if(!v)return;
+  openHistorialModal('Ajustes — '+v.producto,v.ajustes||[],[
+    {key:'fecha',label:'Fecha'},{key:'totalAntes',label:'Antes'},
+    {key:'totalDespues',label:'Después'},{key:'motivo',label:'Motivo'}
+  ]);
+}
+function openHistorialCli(id){
+  const c=DB.clients.find(x=>x.id===id);if(!c)return;
+  const hist=[];
+  DB.sales.filter(s=>s.clienteId===id).forEach(v=>(v.ajustes||[]).forEach(a=>hist.push({...a,producto:v.producto})));
+  openHistorialModal('Ajustes — '+c.nombre,hist,[
+    {key:'fecha',label:'Fecha'},{key:'producto',label:'Producto'},
+    {key:'totalAntes',label:'Antes'},{key:'totalDespues',label:'Después'},{key:'motivo',label:'Motivo'}
+  ]);
+}
 async function deleteCompra(id){
   const c=DB.purchases.find(x=>x.id===id);
   if(!c){toastMsg('No encontrada','err');return;}
-  if(c.estado==='recibido'){toastMsg('No se puede eliminar una compra ya recibida','err');return;}
-  if(!confirm('\u00bfEliminar este pedido pendiente?'))return;
+  if(c.estado==='recibido'){toastMsg('No se puede eliminar: ya fue recibida','err');return;}
+  const prov=DB.providers.find(p=>p.id===c.provId);
+  let msg='\u00bfEliminar este pedido pendiente?\n\nProveedor: '+(prov?prov.nombre:c.proveedor)+'\nProducto: '+c.producto+'\nTotal: '+fmt$(c.total);
+  if(prov&&prov.pagado>0)msg+='\n\n\u26a0\ufe0f Has abonado '+fmt$(prov.pagado)+' a '+prov.nombre+'.\nRecuerda solicitar devoluci\u00f3n si cancelas.';
+  if(!confirm(msg))return;
   DB.purchases=DB.purchases.filter(x=>x.id!==id);
   saveDB();markPending();await saveToGoogle();
   closeM('m-compra-new');renderCompras();toastMsg('Pedido eliminado');
@@ -3079,10 +3177,12 @@ function vRow(v){
     <td>${estadoPill}</td>
     <td>
       <div style="display:flex;gap:3px;flex-wrap:wrap">
-        ${pend>0?`<button class="btn btn-outline btn-sm" onclick="abrirPago(${v.id})">+Pago</button>`:''}
+      ${pend>0?`<button class="btn btn-outline btn-sm" onclick="abrirPago(${v.id})">+Pago</button>`:''}
         ${ent<v.uds?`<button class="btn btn-ok btn-sm" onclick="abrirEntrega(${v.id})">Entregar</button>`:''}
         ${pend>0?`<button class="btn btn-wa btn-sm" onclick="waCobranza(${v.id})">WA</button>`:''}
         <button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})">&#9999;</button>
+        ${(v.ajustes||[]).length>0?`<button class="btn btn-outline btn-sm" onclick="openHistorialVenta(${v.id})">Hist.</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteVenta(${v.id})" title="Eliminar">&#128465;</button>
       </div>
     </td>
   </tr>`;
@@ -3090,7 +3190,12 @@ function vRow(v){
 
 function buildVentaProductos(){
   const opts=[];
-  DB.inventory.forEach(i=>{const ex=getExistencia(i);if(ex>0){const prod=DB.products.find(p=>p.id===i.pid);opts.push(`<option value="inv:${i.id}">${i.nombre} ${i.tipo} ${i.pres} — exist: ${ex} — ${fmt$(i.precio)}</option>`);}});
+  DB.inventory.forEach(i=>{
+    const ex=getExistencia(i);if(ex<=0)return;
+    const prod=DB.products.find(p=>p.id===i.pid);
+    if(prod&&(prod.oculto||prod.no_vendible))return;
+    opts.push(`<option value="inv:${i.id}">${i.nombre} ${i.tipo} ${i.pres} — exist: ${ex} — ${fmt$(i.precio)}</option>`);
+  });
   DB.packages.forEach(pkg=>{
     if(!pkgEsActivo(pkg))return;
     const cap=getPkgCapacidad(pkg);if(cap>0)opts.push(`<option value="pkg:${pkg.id}">🎁 ${pkg.nombre} — exist: ${cap} — ${fmt$(pkg.precio)}</option>`);
@@ -3179,8 +3284,12 @@ async function saveVenta(){
       pagos:ant>0?[{fecha:TODAY,monto:ant}]:[],pkgProds:[],ajustes:[]});
     inv.comprometidas=(inv.comprometidas||0)+uds;
   }
-  syncClientBalances();saveDB();markPending();await saveToGoogle();
-  closeM('m-venta');renderVentas();calcAlerts();toastMsg('Venta registrada','ok');
+  syncClientBalances();saveDB();
+  closeM('m-venta');
+  sv('v-cli','');sv('v-prod','');sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');
+  renderVentas();calcAlerts();
+  markPending();await saveToGoogle();
+  toastMsg('Venta registrada','ok');
 }
 
 function renderPagoCalPreview(){
@@ -3260,6 +3369,65 @@ async function confirmarEntrega(){
   }
   saveDB();markPending();await saveToGoogle();
   closeM('m-entrega');renderVentas();renderInv();calcAlerts();toastMsg(ent+' unidad(es) entregadas','ok');
+}
+
+async function deleteVenta(id){
+  const v=DB.sales.find(x=>x.id===id);if(!v)return;
+  const totalPagado=v.pagado||0;
+  if(totalPagado>0){
+    if(!confirm('\u00bfEliminar esta venta?\n\n\u26a0\ufe0f El cliente ha pagado '+fmt$(totalPagado)+'.\nDeber\u00e1s devolverle ese monto.'))return;
+  }else{
+    if(!confirm('\u00bfEliminar esta venta? No tiene pagos.'))return;
+  }
+  if(!v.esPaquete&&v.invId){const inv=DB.inventory.find(i=>i.id===v.invId);if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)-v.uds);}
+  else if(v.pkgProds)(v.pkgProds||[]).forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)-(pp.uds||1)*v.uds);});
+  DB.sales=DB.sales.filter(x=>x.id!==id);
+  syncClientBalances();saveDB();markPending();await saveToGoogle();
+  renderVentas();calcAlerts();toastMsg('Venta eliminada');
+}
+
+function waPlanCliente(cliId){
+  const c=DB.clients.find(x=>x.id===cliId);if(!c)return;
+  const ventas=DB.sales.filter(s=>s.clienteId===cliId&&(s.total-s.pagado)>0);
+  if(!ventas.length){toastMsg('El cliente no tiene saldo pendiente','ok');return;}
+  const timeline=[];
+  ventas.forEach(v=>{
+    const pend=v.total-v.pagado;
+    const plan=(v.plan_pagos||[]).filter(p=>p.tipo==='programado');
+    if(plan.length){
+      plan.forEach(p=>timeline.push({fecha:p.fecha,iso:dateToISO(p.fecha)||'',monto:p.monto,producto:v.producto}));
+    }else if(pend>0&&v.prox&&v.prox!=='-'){
+      const quinc=v.quinc||200;
+      let r=pend,f=dateToISO(v.prox)||TODAY_ISO,i=0;
+      while(r>0&&i<24){
+        const m=Math.min(r,quinc);
+        timeline.push({fecha:normalizeDate(f),iso:f,monto:m,producto:v.producto});
+        r=Math.round((r-m)*100)/100;
+        const d=new Date(f);d.setDate(d.getDate()+15);f=d.toISOString().split('T')[0];i++;
+      }
+    }
+  });
+  timeline.sort((a,b)=>a.iso.localeCompare(b.iso));
+  const totalPend=ventas.reduce((s,v)=>s+(v.total-v.pagado),0);
+  let msg='Hola '+c.nombre+' \uD83C\uDF19\n\n';
+  msg+='*\uD83D\uDCC5 Plan de pagos \u2014 Aura de Oriente*\n';
+  msg+='Fecha: '+fmtDate(TODAY)+'\n';
+  msg+='Saldo total: *'+fmt$(totalPend)+'*\n\n';
+  if(ventas.length>1){
+    msg+='*Resumen por producto:*\n';
+    ventas.forEach((v,i)=>msg+='  '+(i+1)+'. '+v.producto+': *'+fmt$(v.total-v.pagado)+'*\n');
+    msg+='\n';
+  }
+  msg+='*Calendario de pagos:*\n';
+  let saldo=totalPend;
+  timeline.forEach((p,i)=>{
+    saldo=Math.max(0,Math.round((saldo-p.monto)*100)/100);
+    msg+='  '+(i+1)+'. '+fmtDate(p.fecha)+(ventas.length>1?' ('+p.producto+')':'')+'\n';
+    msg+='     *'+fmt$(p.monto)+'*'+(saldo>0?' \u2022 Saldo: '+fmt$(saldo):' \u2705 Liquidado');
+    msg+='\n';
+  });
+  msg+='\nGracias por tu confianza \u2728\nAura de Oriente';
+  window.open('https://wa.me/52'+(c.tel||'')+'?text='+encodeURIComponent(msg),'_blank');
 }
 
 function waCobranza(id){
@@ -3365,8 +3533,9 @@ function renderCli(){
     <td>${!(c.saldo||0)?'<span class="pill p-ok">Al corriente</span>':'<span class="pill p-err">Saldo pend.</span>'}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="editCli(${c.id})">&#9999;</button>
+      ${DB.sales.some(s=>s.clienteId===c.id&&(s.ajustes||[]).length>0)?`<button class="btn btn-outline btn-sm" onclick="openHistorialCli(${c.id})" title="Historial">&#128203;</button>`:''}
       <button class="btn btn-wa btn-sm" onclick="waEstadoCuenta(${c.id})">WA</button>
-      <button class="btn btn-outline btn-sm" onclick="openCliDetalle(${c.id})">&#128203;</button>
+      ${(c.saldo||0)>0?`<button class="btn btn-outline btn-sm" onclick="waPlanCliente(${c.id})" title="Plan de pagos WA">&#128197;</button>`:''}
     </td>
   </tr>`).join('');
 }
@@ -3471,7 +3640,7 @@ function renderProv(){
         <button class="btn btn-outline btn-sm" onclick="editProv(${p.id})">&#9999;</button>
         <button class="btn btn-outline btn-sm" onclick="abonarProv(${p.id})">+Abono</button>
         <button class="btn btn-outline btn-sm" onclick="ajustarProv(${p.id})">Ajuste</button>
-        <button class="btn btn-outline btn-sm" onclick="openProvDetalle(${p.id})">&#128203;</button>
+        ${(p.historial&&p.historial.length)?`<button class="btn btn-outline btn-sm" onclick="openProvDetalle(${p.id})" title="Historial">&#128203;</button>`:''}
       </td>
     </tr>`;
   }).join('');
@@ -3560,26 +3729,27 @@ async function confirmarAjusteProv(id){
 function openProvDetalle(id){
   const p=DB.providers.find(x=>x.id===id);if(!p)return;
   const saldo=p.total-p.pagado;
-  const html=`<div <div style="background:var(--surf);border-radius:var(--r);padding:18px;border:.5px solid var(--bord2)">class="mhdr"><h3>${p.nombre}</h3><button class="mx" onclick="closeM('m-prov-det')">\u2715</button></div>
-    <div style="overflow-y:auto;max-height:65vh">
-    <div class="sc-row">
-      <div class="sc sc-err"><div class="sc-l">Deuda</div><div class="sc-v">${fmt$(saldo)}</div></div>
-      <div class="sc sc-ok"><div class="sc-l">Pagado</div><div class="sc-v">${fmt$(p.pagado)}</div></div>
-      <div class="sc"><div class="sc-l">Total</div><div class="sc-v">${fmt$(p.total)}</div></div>
-    </div>
-    <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Historial</div>
-    ${!(p.historial&&p.historial.length)?'<div class="empty"><p>Sin historial</p></div>':
-    `<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Detalle</th></tr></thead><tbody>
-    ${p.historial.slice().reverse().map(h=>`<tr>
-      <td>${fmtDate(h.fecha)}</td>
-      <td><span class="tag">${h.tipo}</span></td>
-      <td style="color:${h.tipo==='abono'?'var(--ok)':'var(--err)'};font-weight:500">${h.tipo==='abono'?'-':'+'} ${fmt$(Math.abs(h.monto))}</td>
-      <td style="font-size:11px;color:var(--mist)">${h.motivo||''}</td>
-    </tr>`).join('')}
-    </tbody></table>`}
-    </div>
-    <div class="mfoot"><button class="btn btn-outline" onclick="closeM('m-prov-det')">Cerrar</button></div>`;
-  $$('m-prov-det').innerHTML=html;openM('m-prov-det');
+  const hist=p.historial||[];
+  const html='<div style="background:var(--surf);border-radius:var(--r);padding:18px;border:.5px solid var(--bord2);width:min(560px,100%)">'
+    +'<div class="mhdr"><h3>'+p.nombre+'</h3><button class="mx" onclick="closeM(\'m-inv-det\')">×</button></div>'
+    +'<div class="sc-row" style="margin-bottom:10px">'
+    +'<div class="sc sc-err"><div class="sc-l">Deuda</div><div class="sc-v">'+fmt$(saldo)+'</div></div>'
+    +'<div class="sc sc-ok"><div class="sc-l">Pagado</div><div class="sc-v">'+fmt$(p.pagado)+'</div></div>'
+    +'<div class="sc"><div class="sc-l">Total</div><div class="sc-v">'+fmt$(p.total)+'</div></div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Historial de movimientos</div>'
+    +'<div style="overflow-x:auto;overflow-y:auto;max-height:50vh">'
+    +(!hist.length?'<div class="empty"><p>Sin historial</p></div>'
+      :'<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Motivo</th></tr></thead><tbody>'
+      +hist.slice().reverse().map(h=>'<tr>'
+        +'<td style="font-size:11px">'+fmtDate(h.fecha)+'</td>'
+        +'<td><span class="tag">'+h.tipo+'</span></td>'
+        +'<td style="font-weight:500;color:'+(h.tipo==='abono'?'var(--ok)':'var(--err)')+'">'+(h.tipo==='abono'?'−':'+')+''+fmt$(Math.abs(h.monto||0))+'</td>'
+        +'<td style="font-size:11px;color:var(--mist)">'+(h.motivo||'')+'</td>'
+        +'</tr>').join('')
+      +'</tbody></table>')
+    +'</div><div class="mfoot"><button class="btn btn-outline" onclick="closeM(\'m-inv-det\')">Cerrar</button></div></div>';
+  $$('m-inv-det').innerHTML=html;openM('m-inv-det');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3733,20 +3903,35 @@ function renderReporte(){
       <div class="sc sc-ok"><div class="sc-l">Recibidos</div><div class="sc-v">${rec}</div></div>
       <div class="sc sc-err"><div class="sc-l">Pendientes</div><div class="sc-v">${list.length-rec}</div></div>
       <div class="sc"><div class="sc-l">Monto total</div><div class="sc-v" style="font-size:14px">${fmt$(totP)}</div></div>`;
-    thead.innerHTML='<tr><th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Tipo</th><th>Pres.</th><th>Uds</th><th>Total</th><th>Estado</th></tr>';
+    thead.innerHTML='<tr><th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Tipo</th><th>Pres.</th><th>Uds</th><th>Costo u.</th><th>Total</th><th>Estado</th></tr>';
     tbody.innerHTML=list.map(c=>`<tr>
       <td>${fmtDate(c.fecha)}</td><td>${c.proveedor}</td><td>${c.producto}</td>
-      <td>${c.tipo}</td><td>${c.pres}</td><td>${c.uds}</td><td>${fmt$(c.total)}</td>
+      <td>${c.tipo}</td><td>${c.pres}</td><td>${c.uds}</td><td>${fmt$(c.costo)}</td><td>${fmt$(c.total)}</td>
       <td>${c.estado==='recibido'?'<span class="pill p-ok">Recibido</span>':'<span class="pill p-warn">Pendiente</span>'}</td>
-    </tr>`).join('')||'<tr><td colspan="8"><div class="empty"><p>Sin datos</p></div></td></tr>';
+    </tr>`).join('')||'<tr><td colspan="9"><div class="empty"><p>Sin datos</p></div></td></tr>';
   }
   else if(curReporte==='pagos-prov'){
     let list=(DB.payments_prov||[]).filter(p=>{
-      if(desde&&p.fecha<desde)return false;if(hasta&&p.fecha>hasta)return false;
+      if(desde&&dateToISO(p.fecha)<desde)return false;if(hasta&&dateToISO(p.fecha)>hasta)return false;
       if(provId&&p.provId!==provId)return false;return true;
     });
-    stats.innerHTML=`<div class="sc sc-ok"><div class="sc-l">Abonos</div><div class="sc-v">${list.length}</div></div>
-      <div class="sc"><div class="sc-l">Total abonado</div><div class="sc-v" style="font-size:14px">${fmt$(list.reduce((a,p)=>a+p.monto,0))}</div></div>`;
+    // Totals across ALL providers
+    const _totalComprado=DB.providers.reduce((a,p)=>a+p.total,0);
+    const _totalPagado=DB.providers.reduce((a,p)=>a+p.pagado,0);
+    const _totalAdeudado=_totalComprado-_totalPagado;
+    stats.innerHTML=`<div class="sc"><div class="sc-l">Abonos</div><div class="sc-v">${list.length}</div></div>
+      <div class="sc sc-ok"><div class="sc-l">Total abonado</div><div class="sc-v" style="font-size:14px">${fmt$(list.reduce((a,p)=>a+p.monto,0))}</div></div>
+      <div class="sc sc-err"><div class="sc-l">Total adeudado</div><div class="sc-v" style="font-size:14px">${fmt$(_totalAdeudado)}</div></div>
+      <div class="sc"><div class="sc-l">Total comprado</div><div class="sc-v" style="font-size:14px">${fmt$(_totalComprado)}</div></div>`;
+    // Summary by provider before detail
+    const _provResumen=DB.providers.filter(p=>!provId||p.id===provId).map(p=>{
+      const _ab=(DB.payments_prov||[]).filter(x=>x.provId===p.id).reduce((a,x)=>a+x.monto,0);
+      return `<tr><td style="font-weight:500">${p.nombre}</td><td style="text-align:right">${fmt$(p.total)}</td><td style="text-align:right;color:var(--ok)">${fmt$(p.pagado)}</td><td style="text-align:right;color:${(p.total-p.pagado)>0?'var(--err)':'var(--ok)'};font-weight:500">${fmt$(p.total-p.pagado)}</td></tr>`;
+    }).join('');
+    extra.innerHTML='<div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:12px;margin-bottom:12px">'
+      +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Resumen por proveedor</div>'
+      +'<div style="overflow-x:auto"><table><thead><tr><th>Proveedor</th><th style="text-align:right">Total comprado</th><th style="text-align:right">Pagado</th><th style="text-align:right">Adeudado</th></tr></thead>'
+      +'<tbody>'+_provResumen+'</tbody></table></div></div>';
     thead.innerHTML='<tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Tipo</th><th>Motivo</th></tr>';
     tbody.innerHTML=list.map(p=>`<tr>
       <td>${fmtDate(p.fecha)}</td><td>${p.nombre}</td><td style="color:var(--ok)">${fmt$(p.monto)}</td>
@@ -3777,10 +3962,29 @@ function renderReporte(){
   }
   else if(curReporte==='pagos-cli'){
     const allPagos=[];
-    DB.sales.forEach(v=>{(v.pagos||[]).forEach(p=>{if((!desde||p.fecha>=desde)&&(!hasta||p.fecha<=hasta)&&(!cliId||v.clienteId===cliId))allPagos.push({...p,cliente:v.cliente,producto:v.producto});});});
+    DB.sales.forEach(v=>{(v.pagos||[]).forEach(p=>{if((!desde||dateToISO(p.fecha)>=desde)&&(!hasta||dateToISO(p.fecha)<=hasta)&&(!cliId||v.clienteId===cliId))allPagos.push({...p,cliente:v.cliente,clienteId:v.clienteId,producto:v.producto});});});
     allPagos.sort((a,b)=>b.fecha.localeCompare(a.fecha));
-    stats.innerHTML=`<div class="sc sc-ok"><div class="sc-l">Pagos</div><div class="sc-v">${allPagos.length}</div></div>
-      <div class="sc"><div class="sc-l">Total cobrado</div><div class="sc-v" style="font-size:14px">${fmt$(allPagos.reduce((a,p)=>a+p.monto,0))}</div></div>`;
+    // Totals
+    const _totalVendido=DB.sales.filter(v=>!cliId||v.clienteId===cliId).reduce((a,v)=>a+v.total,0);
+    const _totalCobrado=DB.sales.filter(v=>!cliId||v.clienteId===cliId).reduce((a,v)=>a+v.pagado,0);
+    const _totalAdeudadoCli=_totalVendido-_totalCobrado;
+    stats.innerHTML=`<div class="sc"><div class="sc-l">Pagos registrados</div><div class="sc-v">${allPagos.length}</div></div>
+      <div class="sc"><div class="sc-l">Total vendido</div><div class="sc-v" style="font-size:14px">${fmt$(_totalVendido)}</div></div>
+      <div class="sc sc-ok"><div class="sc-l">Total cobrado</div><div class="sc-v" style="font-size:14px">${fmt$(_totalCobrado)}</div></div>
+      <div class="sc sc-err"><div class="sc-l">Total adeudado</div><div class="sc-v" style="font-size:14px">${fmt$(_totalAdeudadoCli)}</div></div>`;
+    // Summary by client before detail
+    const _cliResumen=DB.clients.filter(c=>!cliId||c.id===cliId).map(c=>{
+      const _vs=DB.sales.filter(s=>s.clienteId===c.id);
+      const _comp=_vs.reduce((a,v)=>a+v.total,0);
+      const _cob=_vs.reduce((a,v)=>a+v.pagado,0);
+      const _adeu=_comp-_cob;
+      if(!_comp)return '';
+      return `<tr><td style="font-weight:500">${c.nombre}</td><td style="text-align:right">${fmt$(_comp)}</td><td style="text-align:right;color:var(--ok)">${fmt$(_cob)}</td><td style="text-align:right;color:${_adeu>0?'var(--err)':'var(--ok)'};font-weight:500">${fmt$(_adeu)}</td></tr>`;
+    }).filter(Boolean).join('');
+    extra.innerHTML='<div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:12px;margin-bottom:12px">'
+      +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Resumen por cliente</div>'
+      +'<div style="overflow-x:auto"><table><thead><tr><th>Cliente</th><th style="text-align:right">Total comprado</th><th style="text-align:right">Cobrado</th><th style="text-align:right">Adeudado</th></tr></thead>'
+      +'<tbody>'+_cliResumen+'</tbody></table></div></div>';
     thead.innerHTML='<tr><th>Fecha</th><th>Cliente</th><th>Producto</th><th>Monto</th></tr>';
     tbody.innerHTML=allPagos.map(p=>`<tr>
       <td>${fmtDate(p.fecha)}</td><td>${p.cliente}</td><td style="font-size:11px">${p.producto}</td>
@@ -3833,52 +4037,155 @@ function renderRankingClientes(stats,thead,tbody,extra){
 }
 
 function renderProyeccionCobranza(stats,thead,tbody,extra){
-  // Ventas pendientes con próximos pagos
   const hoy=new Date();hoy.setHours(0,0,0,0);
-  const pendientes=DB.sales.filter(v=>v.total-v.pagado>0&&v.prox!=='-');
-  pendientes.sort((a,b)=>a.prox.localeCompare(b.prox));
-  const tot30=pendientes.filter(v=>diffD(v.prox)!==null&&diffD(v.prox)<=30).reduce((a,v)=>a+(v.total-v.pagado),0);
-  const tot60=pendientes.filter(v=>diffD(v.prox)!==null&&diffD(v.prox)<=60).reduce((a,v)=>a+(v.total-v.pagado),0);
-  const venc=pendientes.filter(v=>diffD(v.prox)<0).length;
-  stats.innerHTML=`<div class="sc sc-err"><div class="sc-l">Vencidos</div><div class="sc-v">${venc}</div></div>
+
+  // ── Build full payment timeline: expand plan_pagos OR generate from prox+quinc
+  // This covers ALL future payments across all pending sales, not just "next payment"
+  const allPending=DB.sales.filter(v=>v.total-v.pagado>0);
+
+  // For each pending sale, generate the full list of future payments
+  function getFuturePayments(v){
+    const saldo=v.total-v.pagado;
+    const plan=(v.plan_pagos||[]).filter(p=>p.tipo==='programado');
+    const payments=[];
+    if(plan.length){
+      plan.forEach(p=>{
+        const iso=dateToISO(normalizeDate(p.fecha))||'';
+        if(iso>=hoy.toISOString().split('T')[0])
+          payments.push({iso,fecha:p.fecha,monto:p.monto,ventaId:v.id,cliente:v.cliente,producto:v.producto,saldoVenta:saldo,quinc:v.quinc||200});
+      });
+    } else if(v.prox&&v.prox!=='-'){
+      // Generate from prox + quinc
+      const quinc=v.quinc||200;
+      let r=saldo, f=dateToISO(v.prox)||'', i=0;
+      while(r>0&&i<24&&f){
+        if(f>=hoy.toISOString().split('T')[0]){
+          const m=Math.min(r,quinc);
+          payments.push({iso:f,fecha:normalizeDate(f),monto:m,ventaId:v.id,cliente:v.cliente,producto:v.producto,saldoVenta:saldo,quinc});
+        }
+        r=Math.round((r-Math.min(r,quinc))*100)/100;
+        const d=new Date(f);d.setDate(d.getDate()+15);f=d.toISOString().split('T')[0];i++;
+      }
+    }
+    return payments;
+  }
+
+  // Collect all future payments
+  const allFuturePayments=[];
+  allPending.forEach(v=>allFuturePayments.push(...getFuturePayments(v)));
+  allFuturePayments.sort((a,b)=>a.iso.localeCompare(b.iso));
+
+  // Vencidos = sales where prox date is past
+  const pendientes=allPending.filter(v=>v.prox&&v.prox!=='-'&&v.prox!=='');
+  const vencidos=pendientes.filter(v=>diffD(v.prox)!==null&&diffD(v.prox)<0);
+  const totalVencido=vencidos.reduce((a,v)=>a+(v.total-v.pagado),0);
+  const totalAdeudado=allPending.reduce((a,v)=>a+(v.total-v.pagado),0);
+
+  // Cobrables: sum of first payment of each pending sale within window
+  function cobrable(days){
+    return allFuturePayments
+      .filter((p,idx)=>{
+        // Only count first occurrence per venta within the window
+        const firstForVenta=allFuturePayments.findIndex(x=>x.ventaId===p.ventaId);
+        return idx===firstForVenta && diffD(normalizeDate(p.iso))!==null && diffD(normalizeDate(p.iso))<=days;
+      })
+      .reduce((a,p)=>a+p.monto,0);
+  }
+  const tot7=cobrable(7);
+  const tot15=cobrable(15);
+  const tot30=cobrable(30);
+  const tot60=cobrable(60);
+
+  // Stats
+  stats.innerHTML=`<div class="sc sc-err"><div class="sc-l">Vencidos</div><div class="sc-v">${vencidos.length}</div></div>
+    <div class="sc" style="border-color:rgba(155,34,38,.2);background:#fef9f9"><div class="sc-l">Total vencido</div><div class="sc-v" style="font-size:14px;color:var(--err)">${fmt$(totalVencido)}</div></div>
+    <div class="sc" style="border-color:rgba(201,146,42,.3)"><div class="sc-l">Cobrable 7d</div><div class="sc-v" style="font-size:14px;color:var(--gold)">${fmt$(tot7)}</div></div>
+    <div class="sc" style="border-color:rgba(201,146,42,.2)"><div class="sc-l">Cobrable 15d</div><div class="sc-v" style="font-size:14px;color:var(--gold)">${fmt$(tot15)}</div></div>
     <div class="sc"><div class="sc-l">Cobrable 30d</div><div class="sc-v" style="font-size:14px">${fmt$(tot30)}</div></div>
     <div class="sc sc-ok"><div class="sc-l">Cobrable 60d</div><div class="sc-v" style="font-size:14px">${fmt$(tot60)}</div></div>
-    <div class="sc"><div class="sc-l">Cuentas activas</div><div class="sc-v">${pendientes.length}</div></div>`;
-  // Proyección por semana
+    <div class="sc"><div class="sc-l">Cuentas activas</div><div class="sc-v">${allPending.length}</div></div>`;
+
+  // ── Weekly projection: each week starts on Monday ──────────────────────
+  // Find the most recent Monday on or before today
+  const dayOfWeek=hoy.getDay(); // 0=Sun, 1=Mon...
+  const daysToMonday=dayOfWeek===0?-6:1-dayOfWeek; // go back to Monday
+  const firstMonday=new Date(hoy);firstMonday.setDate(hoy.getDate()+daysToMonday);
+  firstMonday.setHours(0,0,0,0);
+
   const semanas=[];
   for(let w=0;w<8;w++){
-    const ini=new Date(hoy);ini.setDate(ini.getDate()+w*7);
-    const fin=new Date(ini);fin.setDate(fin.getDate()+6);
-    const iniISO=ini.toISOString().split('T')[0];const finISO=fin.toISOString().split('T')[0];
-    const cobros=pendientes.filter(v=>v.prox>=iniISO&&v.prox<=finISO);
-    const monto=cobros.reduce((a,v)=>a+Math.min(v.quinc||200,v.total-v.pagado),0);
-    semanas.push({iniISO,finISO,monto,cobros:cobros.length});
+    const lunes=new Date(firstMonday);lunes.setDate(firstMonday.getDate()+w*7);
+    const domingo=new Date(lunes);domingo.setDate(lunes.getDate()+6);
+    const iniISO=lunes.toISOString().split('T')[0];
+    const finISO=domingo.toISOString().split('T')[0];
+    // Sum ALL payments that fall in this week
+    const pagosEnSemana=allFuturePayments.filter(p=>p.iso>=iniISO&&p.iso<=finISO);
+    const monto=pagosEnSemana.reduce((a,p)=>a+p.monto,0);
+    semanas.push({iniISO,finISO,monto,cobros:pagosEnSemana.length,lunes});
   }
+
+  const _maxBar=Math.max(...semanas.map(x=>x.monto),1);
+  const _wVencido=Math.min(totalVencido/_maxBar,1);
+
   extra.innerHTML=`<div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:12px;margin-bottom:12px">
-    <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Proyecci\u00f3n semanal (pr\u00f3ximas 8 semanas)</div>
+    <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Proyecci\u00f3n semanal (8 semanas — por lunes)</div>
     <div style="display:flex;flex-direction:column;gap:4px">
-    ${semanas.map(s=>{const w=s.monto/Math.max(...semanas.map(x=>x.monto),1);return `<div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:10px;color:var(--mist);min-width:100px">${fmtDate(s.iniISO)}</span>
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:.5px solid var(--bord2);margin-bottom:4px">
+      <span style="font-size:10px;font-weight:500;color:var(--err);min-width:100px">Vencido total</span>
       <div style="flex:1;background:var(--surf3);border-radius:4px;height:16px;overflow:hidden">
-        <div style="background:var(--gold);height:100%;width:${Math.round(w*100)}%;transition:width .3s"></div>
+        <div style="background:var(--err);height:100%;width:${Math.round(_wVencido*100)}%;opacity:.6"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:var(--err);min-width:70px;text-align:right">${fmt$(totalVencido)}</span>
+      <span style="font-size:10px;color:var(--mist);min-width:40px">${vencidos.length} cta(s)</span>
+    </div>
+    ${semanas.map(s=>{
+      const wBar=s.monto/_maxBar;
+      const esHoy=s.iniISO<=hoy.toISOString().split('T')[0]&&s.finISO>=hoy.toISOString().split('T')[0];
+      return `<div style="display:flex;align-items:center;gap:8px${esHoy?';background:rgba(201,146,42,.05);border-radius:4px;padding:2px 4px':''}">
+      <span style="font-size:10px;color:var(--mist);min-width:100px">${fmtDate(normalizeDate(s.iniISO))}</span>
+      <div style="flex:1;background:var(--surf3);border-radius:4px;height:16px;overflow:hidden">
+        <div style="background:${esHoy?'var(--gold2)':'var(--gold)'};height:100%;width:${Math.round(wBar*100)}%;transition:width .3s"></div>
       </div>
       <span style="font-size:11px;font-weight:500;min-width:70px;text-align:right">${fmt$(s.monto)}</span>
       <span style="font-size:10px;color:var(--mist);min-width:40px">${s.cobros} pago(s)</span>
-    </div>`;}).join('')}
+    </div>`;
+    }).join('')}
     </div>
   </div>`;
-  thead.innerHTML='<tr><th>Pr\u00f3x. pago</th><th>Cliente</th><th>Producto</th><th>Saldo total</th><th>Monto esperado</th><th>Estado</th></tr>';
-  tbody.innerHTML=pendientes.map(v=>{
-    const dd=diffD(v.prox);const saldo=v.total-v.pagado;
-    const esperado=Math.min(v.quinc||200,saldo);
+
+  // ── Detail table: vencidos first, then next 8 weeks of payments ─────────
+  // Build a flat list of individual payments for the table
+  const _vencidosRows=vencidos.map(v=>({
+    fecha:v.prox,iso:dateToISO(v.prox)||'',
+    cliente:v.cliente,producto:v.producto,
+    saldo:v.total-v.pagado,esperado:Math.min(v.quinc||200,v.total-v.pagado),dd:diffD(v.prox)
+  }));
+
+  // Future payments from allFuturePayments (next 8 weeks)
+  const eightWeeksISO=new Date(firstMonday);eightWeeksISO.setDate(firstMonday.getDate()+56);
+  const eightWeeksStr=eightWeeksISO.toISOString().split('T')[0];
+  const _futureRows=allFuturePayments
+    .filter(p=>p.iso<=eightWeeksStr)
+    .map(p=>({fecha:p.fecha,iso:p.iso,cliente:p.cliente,producto:p.producto,saldo:p.saldoVenta,esperado:p.monto,dd:diffD(normalizeDate(p.iso))}));
+
+  // Combine: vencidos + future, deduplicate by keeping first occurrence per ventaId per week only
+  const seenKeys=new Set();
+  const tableRows=[..._vencidosRows,..._futureRows].filter(r=>{
+    if(!r.iso)return false;
+    return true; // show all — sorted by date
+  }).slice(0,40); // show up to 40 rows for 8 weeks
+
+  thead.innerHTML='<tr><th>Fecha pago</th><th>Cliente</th><th>Producto</th><th>Saldo venta</th><th>Monto</th><th>Estado</th></tr>';
+  tbody.innerHTML=tableRows.map(r=>{
+    const dd=r.dd;
     return `<tr>
-      <td style="color:${dd<0?'var(--err)':dd<=3?'var(--warn)':'inherit'};font-size:11px">${fmtDate(v.prox)}${dd<0?` <span class="vb-r">(${Math.abs(dd)}d)</span>`:''}</td>
-      <td>${v.cliente}</td><td style="font-size:11px">${v.producto}</td>
-      <td style="color:var(--err)">${fmt$(saldo)}</td>
-      <td style="color:var(--ok);font-weight:500">${fmt$(esperado)}</td>
-      <td>${dd<0?'<span class="pill p-err">Vencido</span>':dd<=3?'<span class="pill p-warn">Urgente</span>':'<span class="pill p-gold">Pr\u00f3ximo</span>'}</td>
+      <td style="color:${dd<0?'var(--err)':dd<=3?'var(--warn)':'inherit'};font-size:11px">${fmtDate(r.fecha||normalizeDate(r.iso))}${dd<0?` <span class="vb-r">(${Math.abs(dd)}d)</span>`:''}</td>
+      <td>${r.cliente}</td><td style="font-size:11px">${r.producto}</td>
+      <td style="color:var(--err)">${fmt$(r.saldo)}</td>
+      <td style="color:var(--ok);font-weight:500">${fmt$(r.esperado)}</td>
+      <td>${dd<0?'<span class="pill p-err">Vencido</span>':dd<=3?'<span class="pill p-warn">Urgente</span>':'<span class="pill p-gold">Programado</span>'}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="6"><div class="empty"><p>Sin cuentas pendientes</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="6"><div class="empty"><p>Sin pagos en las pr\u00f3ximas 8 semanas</p></div></td></tr>';
 }
 
 function exportReportExcel(){
