@@ -4333,6 +4333,19 @@ else setSyncStatus('none');
 // Recalculate comprometidas on load
 DB.inventory.forEach(i=>{i.comprometidas=getComprometidas(i.id);});
 
+(function migrateComprasTotals(){
+  let fixed=0;
+  DB.purchases.forEach(c=>{
+    if(c.estado==='recibido'&&c.udsRecibidas!=null&&c.uds>0){
+      const costoUnit=c.total/c.uds;
+      const expectedTotal=Math.round(costoUnit*c.udsRecibidas*100)/100;
+      if(c.udsRecibidas!==c.uds&&Math.abs(c.total-expectedTotal)>0.01){
+        c.total=expectedTotal;fixed++;
+      }
+    }
+  });
+  if(fixed>0){saveDB();markPending();console.log('Migrated '+fixed+' compra(s)');}
+})();
 syncClientBalances();
 syncProviderTotals();
 renderCatalog();
