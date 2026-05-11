@@ -575,7 +575,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div id="prod-form-body" style="overflow-y:auto;max-height:68vh;padding-right:3px"></div>
   <div class="mfoot">
     <button class="btn btn-outline" onclick="closeM('m-prod')">Cancelar</button>
-    <button class="btn btn-gold" onclick="saveProduct()">&#128190; Guardar</button>
+    <button class="btn btn-gold" id="btn-save-product" onclick="saveProduct()">&#128190; Guardar</button>
   </div>
 </div>
 </div>
@@ -692,7 +692,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div class="mfoot">
     <button class="btn btn-danger btn-sm" id="inv-del-btn" style="display:none" onclick="deleteInvLine()">Eliminar l&#237;nea</button>
     <button class="btn btn-outline" onclick="closeM('m-inv')">Cancelar</button>
-    <button class="btn btn-gold" onclick="saveInv()">Guardar</button>
+    <button class="btn btn-gold" id="btn-save-inv" onclick="saveInv()">Guardar</button>
   </div>
 </div>
 </div>
@@ -727,7 +727,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div class="mfoot">
     <button class="btn btn-danger btn-sm" id="cp-del-btn" style="display:none" onclick="deleteCompra(parseInt(cv('cp-eid')))">Eliminar</button>
     <button class="btn btn-outline" onclick="closeM('m-compra-new')">Cancelar</button>
-    <button class="btn btn-gold" onclick="saveCompra()">Registrar pedido</button>
+    <button class="btn btn-gold" id="btn-save-compra" onclick="saveCompra()">Registrar pedido</button>
   </div>
 </div>
 </div>
@@ -759,7 +759,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div id="v-cal-pagos"></div>
   <div class="mfoot">
     <button class="btn btn-outline" onclick="closeM('m-venta')">Cancelar</button>
-    <button class="btn btn-gold" onclick="saveVenta()">Registrar venta</button>
+    <button class="btn btn-gold" id="btn-save-venta" onclick="saveVenta()">Registrar venta</button>
   </div>
 </div>
 </div>
@@ -800,7 +800,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div id="pago-cal-preview" style="margin:8px 0"></div>
   <div class="mfoot">
     <button class="btn btn-outline" onclick="closeM('m-pago')">Cancelar</button>
-    <button class="btn btn-gold" onclick="confirmarPago()">Aplicar pago</button>
+    <button class="btn btn-gold" id="btn-confirmar-pago" onclick="confirmarPago()">Aplicar pago</button>
   </div>
 </div>
 </div>
@@ -817,7 +817,7 @@ tbody tr:hover td{background:var(--surf2)}
   </div>
   <div class="mfoot">
     <button class="btn btn-outline" onclick="closeM('m-entrega')">Cancelar</button>
-    <button class="btn btn-gold" onclick="confirmarEntrega()">Confirmar entrega</button>
+    <button class="btn btn-gold" id="btn-confirmar-entrega" onclick="confirmarEntrega()">Confirmar entrega</button>
   </div>
 </div>
 </div>
@@ -881,7 +881,7 @@ tbody tr:hover td{background:var(--surf2)}
   <button class="btn btn-outline btn-sm" onclick="addPkgProd()" style="margin-top:6px">+ Agregar producto</button>
   <div class="mfoot">
     <button class="btn btn-outline" onclick="closeM('m-pkg-new')">Cancelar</button>
-    <button class="btn btn-gold" onclick="savePkg()">Guardar</button>
+    <button class="btn btn-gold" id="btn-save-pkg" onclick="savePkg()">Guardar</button>
   </div>
 </div>
 </div>
@@ -1172,9 +1172,9 @@ function syncProviderTotals(){
     // Add manual adjustments on top
     (prov.historial||[]).filter(h=>h.tipo==='ajuste').forEach(a=>base+=(a.monto||0));
     prov.total=Math.max(0,base);
-    // Recalculate pagado from registered payments
-    prov.pagado=(DB.payments_prov||[]).filter(p=>p.provId===prov.id&&p.tipo==='abono')
-      .reduce((a,p)=>a+(p.monto||0),0);
+    // Recalculate pagado from abonos in historial (single source of truth)
+    prov.pagado=(prov.historial||[]).filter(h=>h.tipo==='abono')
+      .reduce((a,h)=>a+(h.monto||0),0);
   });
 }
 function syncClientBalances(){
@@ -1947,6 +1947,9 @@ function setProdMainImg(imgId){
 }
 
 async function saveProduct(){
+  const _btn$$=document.getElementById('btn-save-product');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const nombre=(cv('pf-nombre')||'').trim();if(!nombre){toastMsg('Nombre obligatorio','err');return;}
   const marca=getChips('ci-pf-marca');if(!marca.length){toastMsg('Marca obligatoria','err');return;}
   const desc=(cv('pf-desc')||'').trim();if(!desc){toastMsg('Descripcion obligatoria','err');return;}
@@ -2016,8 +2019,9 @@ async function saveProduct(){
   if(SCRIPT_URL&&savedProd){
     try{await upsertProduct(savedProd);toastMsg('Guardado en Google Sheets','ok');}
     catch(e){toastMsg('Error Sheets: '+e.message,'err');}
-  }
+  }  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
+
 
 async function deleteCurrentProd(){
   if(!editingProdId)return;
@@ -2814,6 +2818,9 @@ function syncMioFromInventory(){
   });
 }
 async function saveInv(){
+  const _btn$$=document.getElementById('btn-save-inv');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const pid=parseInt(cv('inv-prod'));if(!pid){toastMsg('Selecciona un producto','err');return;}
   const prod=DB.products.find(p=>p.id===pid);if(!prod){toastMsg('Producto no encontrado','err');return;}
   const eid=cv('inv-eid');
@@ -2850,8 +2857,9 @@ async function saveInv(){
     DB.inventory.push(inv);
     toastMsg('Inventario agregado','ok');
   }
-  syncMioFromInventory();saveDB();markPending();await saveToGoogle();closeM('m-inv');renderInv();calcAlerts();renderCatalog();
+  syncMioFromInventory();saveDB();markPending();await saveToGoogle();closeM('m-inv');renderInv();calcAlerts();renderCatalog();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
+
 
 async function deleteInvLine(){
   const eid=cv('inv-eid');if(!eid)return;
@@ -2941,6 +2949,9 @@ function renderCompras(){
 }
 
 async function saveCompra(){
+  const _btn$$=document.getElementById('btn-save-compra');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const provId=parseInt(cv('cp-prov')),prodId=parseInt(cv('cp-prod'));
   if(!provId||!prodId){toastMsg('Selecciona proveedor y producto','err');return;}
   const prov=DB.providers.find(p=>p.id===provId);const prod=DB.products.find(p=>p.id===prodId);
@@ -2976,8 +2987,9 @@ async function saveCompra(){
   const _cpr=$$('cp-razon-row');if(_cpr)_cpr.style.display='none';
   syncProviderTotals();
   saveDB();closeM('m-compra-new');renderCompras();
-  markPending();await saveToGoogle();
+  markPending();await saveToGoogle();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar pedido';}
 }
+
 
 function editCompra(id){
   const c=DB.purchases.find(x=>x.id===id);if(!c||c.estado==='recibido'){toastMsg('Solo se pueden editar pedidos pendientes','err');return;}
@@ -3007,9 +3019,16 @@ function openHistorialModal(title,hist,columns){
 }
 function openCompraHistorial(id){
   const c=DB.purchases.find(x=>x.id===id);if(!c)return;
-  openHistorialModal('Historial — '+c.producto,c.historial||[],[
+  const confs=(c.confirmaciones||[]).map(cf=>({
+    fecha:cf.fecha,tipo:'recepcion',
+    cambios:'Recibidas: '+cf.udsRecibidas+' de '+cf.udsPedidas
+      +(cf.diferencia!==0?' (dif: '+cf.diferencia+')':''),
+    motivo:cf.motivo||''
+  }));
+  const all=[...confs,...(c.historial||[])].sort((a,b)=>(dateToISO(a.fecha)||'').localeCompare(dateToISO(b.fecha)||''));
+  openHistorialModal('Historial — '+c.producto,all,[
     {key:'fecha',label:'Fecha'},{key:'tipo',label:'Tipo'},
-    {key:'cambios',label:'Cambios'},{key:'motivo',label:'Motivo'}
+    {key:'cambios',label:'Detalle'},{key:'motivo',label:'Motivo'}
   ]);
 }
 function openHistorialInv(id){
@@ -3050,9 +3069,18 @@ function openHistorialInv(id){
 }
 function openHistorialVenta(id){
   const v=DB.sales.find(x=>x.id===id);if(!v)return;
-  openHistorialModal('Ajustes — '+v.producto,v.ajustes||[],[
-    {key:'fecha',label:'Fecha'},{key:'totalAntes',label:'Antes'},
-    {key:'totalDespues',label:'Después'},{key:'motivo',label:'Motivo'}
+  const hist=(v.ajustes||[]).map(a=>({
+    fecha:a.fecha,
+    cambios:[
+      a.totalAntes!==a.totalDespues?'Total: '+fmt$(a.totalAntes)+'→'+fmt$(a.totalDespues):'',
+      a.precioUAntes!==a.precioUDespues?'P.Unit: '+fmt$(a.precioUAntes)+'→'+fmt$(a.precioUDespues):'',
+      a.udsAntes!==a.udsDespues?'Uds: '+a.udsAntes+'→'+a.udsDespues:'',
+      a.descAntes!==a.descDespues?'Desc: '+fmt$(a.descAntes)+'→'+fmt$(a.descDespues):'',
+    ].filter(Boolean).join(' | ')||'Sin cambios',
+    motivo:a.motivo||''
+  }));
+  openHistorialModal('Ajustes — '+v.producto,hist,[
+    {key:'fecha',label:'Fecha'},{key:'cambios',label:'Cambios'},{key:'motivo',label:'Motivo'}
   ]);
 }
 function openHistorialCli(id){
@@ -3232,6 +3260,7 @@ function vRow(v){
         ${ent<v.uds?`<button class="btn btn-ok btn-sm" onclick="abrirEntrega(${v.id})">Entregar</button>`:''}
         ${pend>0?`<button class="btn btn-wa btn-sm" onclick="waCobranza(${v.id})">WA</button>`:''}
         ${(v.entregadas||0)<v.uds?`<button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})">&#9999;</button>`:''}
+        ${(v.pagos||[]).length>0?`<button class="btn btn-outline btn-sm" onclick="openPagosVenta(${v.id})" title="Ver pagos">Pagos</button>`:''}
         ${(v.ajustes||[]).length>0?`<button class="btn btn-outline btn-sm" onclick="openHistorialVenta(${v.id})">Hist.</button>`:''}
         ${(v.entregadas||0)<v.uds?`<button class="btn btn-danger btn-sm" onclick="deleteVenta(${v.id})" title="Eliminar">&#128465;</button>`:''}
       </div>
@@ -3302,6 +3331,9 @@ function renderCalPagos(){
 }
 
 async function saveVenta(){
+  const _btn$$=document.getElementById('btn-save-venta');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const cliId=parseInt(cv('v-cli'));const prodSel=cv('v-prod');
   if(!cliId||!prodSel){toastMsg('Selecciona cliente y producto','err');return;}
   const cli=DB.clients.find(c=>c.id===cliId);if(!cli){toastMsg('Cliente no encontrado','err');return;}
@@ -3340,8 +3372,9 @@ async function saveVenta(){
   sv('v-cli','');sv('v-prod','');sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');
   renderVentas();calcAlerts();
   markPending();await saveToGoogle();
-  toastMsg('Venta registrada','ok');
+  toastMsg('Venta registrada','ok');  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}
 }
+
 
 function renderPagoCalPreview(){
   const vid=parseInt($$('pago-vid')?.value);const v=DB.sales.find(x=>x.id===vid);if(!v)return;
@@ -3365,6 +3398,9 @@ function abrirPago(id){
   openM('m-pago');setTimeout(renderPagoCalPreview,50);
 }
 async function confirmarPago(){
+  const _btn$$=document.getElementById('btn-confirmar-pago');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const id=parseInt(cv('pago-vid'));const v=DB.sales.find(x=>x.id===id);
   const m=parseFloat(($$('pago-monto')||{}).value)||0;if(m<=0){toastMsg('Monto inv\u00e1lido','err');return;}
   const ap=Math.min(m,v.total-v.pagado);v.pagado+=ap;
@@ -3376,8 +3412,9 @@ async function confirmarPago(){
     while(_rr>0&&_ii<24){const _mm=Math.min(_rr,_qc);_pl.push({fecha:normalizeDate(_ff),monto:_mm,tipo:'programado'});_rr=Math.round((_rr-_mm)*100)/100;const _ddd=new Date(_ff);_ddd.setDate(_ddd.getDate()+15);_ff=_ddd.toISOString().split('T')[0];_ii++;}
     v.plan_pagos=_pl;}
   syncClientBalances();saveDB();markPending();await saveToGoogle();
-  closeM('m-pago');renderVentas();calcAlerts();toastMsg('Pago de '+fmt$(ap)+' registrado','ok');
+  closeM('m-pago');renderVentas();calcAlerts();toastMsg('Pago de '+fmt$(ap)+' registrado','ok');  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Aplicar pago';}
 }
+
 
 function abrirEntrega(id){
   const v=DB.sales.find(x=>x.id===id);if(!v)return;
@@ -3399,6 +3436,9 @@ function abrirEntrega(id){
 }
 
 async function confirmarEntrega(){
+  const _btn$$=document.getElementById('btn-confirmar-entrega');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const id=parseInt(cv('entrega-vid'));const v=DB.sales.find(x=>x.id===id);
   const uds=parseInt(($$('entrega-uds')||{}).value)||1;
   const max=v.uds-(v.entregadas||0);const ent=Math.min(uds,max);
@@ -3425,8 +3465,9 @@ async function confirmarEntrega(){
     const inv=DB.inventory.find(i=>i.id===v.invId);descontarInv(inv,ent,v.cliente+' #'+v.id);
   }
   saveDB();markPending();await saveToGoogle();
-  closeM('m-entrega');renderVentas();renderInv();calcAlerts();toastMsg(ent+' unidad(es) entregadas','ok');
+  closeM('m-entrega');renderVentas();renderInv();calcAlerts();toastMsg(ent+' unidad(es) entregadas','ok');  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Confirmar entrega';}
 }
+
 
 async function deleteVenta(id){
   const v=DB.sales.find(x=>x.id===id);if(!v)return;
@@ -3508,6 +3549,28 @@ function waPlanCliente(cliId){
   window.open('https://wa.me/52'+(c.tel||'')+'?text='+encodeURIComponent(msg),'_blank');
 }
 
+function openPagosVenta(id){
+  const v=DB.sales.find(x=>x.id===id);if(!v)return;
+  const pagos=(v.pagos||[]);
+  const html='<div style="background:var(--surf);border-radius:var(--r);padding:18px;width:min(480px,100%)">'
+    +'<div class="mhdr"><h3>Pagos — '+v.cliente+'</h3><button class="mx" onclick="closeM(\'m-inv-det\')">\u00d7</button></div>'
+    +'<div class="sc-row" style="margin-bottom:10px">'
+    +'<div class="sc"><div class="sc-l">Total</div><div class="sc-v">'+fmt$(v.total)+'</div></div>'
+    +'<div class="sc sc-ok"><div class="sc-l">Pagado</div><div class="sc-v">'+fmt$(v.pagado)+'</div></div>'
+    +'<div class="sc sc-err"><div class="sc-l">Saldo</div><div class="sc-v">'+fmt$(v.total-v.pagado)+'</div></div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pagos registrados</div>'
+    +'<div style="overflow-x:auto;overflow-y:auto;max-height:50vh">'
+    +(!pagos.length?'<div class="empty"><p>Sin pagos</p></div>'
+      :'<table><thead><tr><th>Fecha</th><th style="text-align:right">Monto</th><th>Tipo</th></tr></thead><tbody>'
+      +pagos.slice().reverse().map(p=>'<tr>'
+        +'<td style="font-size:11px">'+fmtDate(p.fecha)+'</td>'
+        +'<td style="text-align:right;font-weight:500;color:var(--ok)">'+fmt$(p.monto)+'</td>'
+        +'<td><span class="tag">'+(p.tipo||'real')+'</span></td>'
+        +'</tr>').join('')+'</tbody></table>')
+    +'</div><div class="mfoot"><button class="btn btn-outline" onclick="closeM(\'m-inv-det\')">Cerrar</button></div></div>';
+  $$('m-inv-det').innerHTML=html;openM('m-inv-det');
+}
 function waCobranza(id){
   const v=DB.sales.find(x=>x.id===id);
   const cli=DB.clients.find(c=>c.id===v.clienteId);
@@ -3641,6 +3704,9 @@ function editCli(id){
 }
 
 async function saveCli(editId){
+  const _btn$$=document.getElementById('cli-save-btn');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const n=(cv('cli-n')||'').trim();if(!n){toastMsg('Escribe el nombre','err');return;}
   if(editId){
     const c=DB.clients.find(x=>x.id===editId);if(!c)return;
@@ -3650,8 +3716,9 @@ async function saveCli(editId){
     DB.clients.push({id:NID++,nombre:n,tel:cv('cli-t'),ciudad:cv('cli-c'),notas:cv('cli-no'),compras:0,saldo:0});
     toastMsg('Cliente guardado','ok');
   }
-  saveDB();markPending();await saveToGoogle();closeM('m-cli');renderCli();
+  saveDB();markPending();await saveToGoogle();closeM('m-cli');renderCli();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
+
 
 function openCliDetalle(id){
   const c=DB.clients.find(x=>x.id===id);if(!c)return;
@@ -3750,6 +3817,9 @@ function editProv(id){
 }
 
 async function saveProv(editId){
+  const _btn$$=document.getElementById('prov-save-btn');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const n=(cv('pv-nombre')||'').trim();if(!n){toastMsg('Nombre obligatorio','err');return;}
   const total=parseFloat(($$('pv-total')||{}).value)||0;
   const pagado=parseFloat(($$('pv-pagado-inp')||{}).value)||0;
@@ -3761,8 +3831,9 @@ async function saveProv(editId){
     DB.providers.push({id:NID++,nombre:n,tel:cv('pv-tel'),concepto:cv('pv-concepto'),total,pagado,tipo:cv('pv-tipo'),historial:[]});
     toastMsg('Proveedor guardado','ok');
   }
-  syncProviderTotals();saveDB();markPending();await saveToGoogle();closeM('m-prov');renderProv();
+  syncProviderTotals();saveDB();markPending();await saveToGoogle();closeM('m-prov');renderProv();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
+
 
 function abonarProv(id){
   const p=DB.providers.find(x=>x.id===id);if(!p)return;
@@ -3957,6 +4028,9 @@ function pkgProdUds(i,val){if(_pkgProdsEdit[i])_pkgProdsEdit[i].uds=parseInt(val
 function pkgProdDel(i){_pkgProdsEdit.splice(i,1);renderPkgProdsEditor(_pkgProdsEdit);}
 
 async function savePkg(){
+  const _btn$$=document.getElementById('btn-save-pkg');
+  if(_btn$$&&_btn$$.disabled)return;
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const n=(cv('pk-n')||'').trim();if(!n){toastMsg('Nombre del paquete obligatorio','err');return;}
   // Collect current prods from DOM
   const rows=$$('pkg-prods-container').querySelectorAll('select');
@@ -3973,8 +4047,9 @@ async function savePkg(){
     status:cv('pk-status')||'activo',fechaIni:cvDate('pk-fini')||'',fechaFin:cvDate('pk-ffin')||''};
   if(eid){const pk=DB.packages.find(x=>x.id===parseInt(eid));if(!pk)return;Object.assign(pk,obj);toastMsg('Paquete actualizado','ok');}
   else{DB.packages.push({id:NID++,...obj});toastMsg('Paquete creado','ok');}
-  sv('pk-eid','');_pkgProdsEdit=[];saveDB();markPending();await saveToGoogle();closeM('m-pkg-new');renderPkg();
+  sv('pk-eid','');_pkgProdsEdit=[];saveDB();markPending();await saveToGoogle();closeM('m-pkg-new');renderPkg();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
+
 
 async function deletePkg(id){
   if(!confirm('Eliminar este paquete?'))return;
