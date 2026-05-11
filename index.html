@@ -785,7 +785,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div class="fg"><label>Motivo del ajuste *</label><textarea id="ev-motivo" placeholder="Ej: Error en precio, descuento especial..." style="min-height:60px"></textarea></div>
   <div class="mfoot">
     <button class="btn btn-outline" onclick="closeM('m-edit-venta')">Cancelar</button>
-    <button class="btn btn-gold" onclick="guardarEditVenta()">Guardar cambios</button>
+    <button class="btn btn-gold" id="btn-guardar-edit-venta" onclick="guardarEditVenta()">Guardar cambios</button>
   </div>
 </div>
 </div>
@@ -930,6 +930,9 @@ tbody tr:hover td{background:var(--surf2)}
 // ═══════════════════════════════════════════════════════════
 //  UTILS
 // ═══════════════════════════════════════════════════════════
+// Module-level flags to prevent double-submit on dynamic modals
+let _recibiendo=false,_abonando=false,_ajustando=false;
+
 function $$(id){return document.getElementById(id);}
 function cv(id){const e=$$(id);return e?e.value:'';}
 function sv(id,v){const e=$$(id);if(e)e.value=(v===null||v===undefined)?'':v;}
@@ -2033,8 +2036,8 @@ async function deleteCurrentProd(){
   const p=DB.products.find(x=>x.id===editingProdId);
   if(p&&p.imgs){p.imgs.forEach(img=>deleteImageFromGDrive(img.id).catch(()=>{}));}
   DB.products=DB.products.filter(p=>p.id!==editingProdId);
-  saveDB();markPending();await saveToGoogle();
-  closeM('m-prod');renderCatalog();toastMsg('Eliminado');
+  saveDB();markPending();
+  closeM('m-prod');saveToGoogle().catch(e=>console.warn(e));renderCatalog();toastMsg('Eliminado');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2857,7 +2860,7 @@ async function saveInv(){
     DB.inventory.push(inv);
     toastMsg('Inventario agregado','ok');
   }
-  syncMioFromInventory();saveDB();markPending();await saveToGoogle();closeM('m-inv');renderInv();calcAlerts();renderCatalog();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
+  syncMioFromInventory();closeM('m-inv');renderInv();calcAlerts();renderCatalog();saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
 
 
@@ -2949,47 +2952,58 @@ function renderCompras(){
 }
 
 async function saveCompra(){
-  const _btn$$=document.getElementById('btn-save-compra');
-  if(_btn$$&&_btn$$.disabled)return;
-  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
+  // Validate FIRST before touching any button
   const provId=parseInt(cv('cp-prov')),prodId=parseInt(cv('cp-prod'));
   if(!provId||!prodId){toastMsg('Selecciona proveedor y producto','err');return;}
-  const prov=DB.providers.find(p=>p.id===provId);const prod=DB.products.find(p=>p.id===prodId);
+  const prov=DB.providers.find(p=>p.id===provId);
+  const prod=DB.products.find(p=>p.id===prodId);
   if(!prov||!prod){toastMsg('Datos no encontrados','err');return;}
   const eid=cv('cp-eid');
   const uds=parseInt(($$('cp-uds')||{}).value)||1;
   const costo=parseFloat(($$('cp-costo')||{}).value)||0;
   const total=parseFloat(($$('cp-total')||{}).value)||uds*costo;
   if(eid){
-    const c=DB.purchases.find(x=>x.id===parseInt(eid));if(!c)return;
     const razon=(cv('cp-razon')||'').trim();
     if(!razon){toastMsg('Escribe la razón del cambio','err');return;}
-    // Build change summary
-    const cambios=[];
-    if(c.uds!==uds)cambios.push('Uds: '+c.uds+'→'+uds);
-    if(c.costo!==costo)cambios.push('Costo: '+fmt$(c.costo)+'→'+fmt$(costo));
-    if(c.total!==total)cambios.push('Total: '+fmt$(c.total)+'→'+fmt$(total));
-    if(c.provId!==provId)cambios.push('Prov: '+c.proveedor+'→'+prov.nombre);
-    c.provId=provId;c.proveedor=prov.nombre;c.prodId=prodId;c.producto=prod.nombre;
-    c.tipo=cv('cp-tipo');c.pres=cv('cp-pres');c.uds=uds;c.costo=costo;c.total=total;c.notas=cv('cp-notas');
-    if(!c.historial)c.historial=[];
-    c.historial.push({fecha:TODAY,tipo:'edicion',cambios:cambios.join(', ')||'Sin cambios en campos clave',motivo:razon});
-    toastMsg('Compra actualizada','ok');
-  }else{
-    DB.purchases.push({id:NID++,fecha:cvDate('cp-fecha')||TODAY,proveedor:prov.nombre,provId,producto:prod.nombre,prodId,
-      tipo:cv('cp-tipo'),pres:cv('cp-pres'),uds,costo,total,notas:cv('cp-notas'),
-      estado:'pendiente',fechaRec:null,udsRecibidas:null,motivoDiff:'',confirmaciones:[],
-      historial:[{fecha:TODAY,tipo:'creacion',cambios:'Pedido creado',motivo:'Registro inicial'}]});
-    toastMsg('Compra registrada','ok');
   }
-  sv('cp-eid','');
-  const _cpd=$$('cp-del-btn');if(_cpd)_cpd.style.display='none';
-  const _cpr=$$('cp-razon-row');if(_cpr)_cpr.style.display='none';
-  syncProviderTotals();
-  saveDB();closeM('m-compra-new');renderCompras();
-  markPending();await saveToGoogle();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar pedido';}
+  // All validation passed — disable btn
+  const _btn=$$('btn-save-compra');
+  if(_btn&&_btn.disabled)return;
+  if(_btn){_btn.disabled=true;_btn.textContent='Guardando…';}
+  try{
+    if(eid){
+      const c=DB.purchases.find(x=>x.id===parseInt(eid));if(!c)return;
+      const razon=(cv('cp-razon')||'').trim();
+      const cambios=[];
+      if(c.uds!==uds)cambios.push('Uds: '+c.uds+'→'+uds);
+      if(c.costo!==costo)cambios.push('Costo: '+fmt$(c.costo)+'→'+fmt$(costo));
+      if(c.total!==total)cambios.push('Total: '+fmt$(c.total)+'→'+fmt$(total));
+      if(c.provId!==provId)cambios.push('Prov: '+c.proveedor+'→'+prov.nombre);
+      c.provId=provId;c.proveedor=prov.nombre;c.prodId=prodId;c.producto=prod.nombre;
+      c.tipo=cv('cp-tipo');c.pres=cv('cp-pres');c.uds=uds;c.costo=costo;c.total=total;c.notas=cv('cp-notas');
+      if(!c.historial)c.historial=[];
+      c.historial.push({fecha:TODAY,tipo:'edicion',cambios:cambios.join(', ')||'Sin cambios en campos clave',motivo:razon});
+    }else{
+      DB.purchases.push({id:NID++,fecha:cvDate('cp-fecha')||TODAY,
+        proveedor:prov.nombre,provId,producto:prod.nombre,prodId,
+        tipo:cv('cp-tipo'),pres:cv('cp-pres'),uds,costo,total,notas:cv('cp-notas'),
+        estado:'pendiente',fechaRec:null,udsRecibidas:null,motivoDiff:'',confirmaciones:[],
+        historial:[{fecha:TODAY,tipo:'creacion',cambios:'Pedido creado',motivo:'Registro inicial'}]});
+    }
+    sv('cp-eid','');
+    const _cpd=$$('cp-del-btn');if(_cpd)_cpd.style.display='none';
+    const _cpr=$$('cp-razon-row');if(_cpr)_cpr.style.display='none';
+    syncProviderTotals();
+    // Close and render immediately — don't wait for Sheets
+    closeM('m-compra-new');
+    renderCompras();
+    saveDB();markPending();
+    toastMsg(eid?'Compra actualizada':'Compra registrada','ok');
+    saveToGoogle().catch(e=>console.warn('Sync error:',e));
+  }finally{
+    if(_btn){_btn.disabled=false;_btn.textContent='Registrar pedido';}
+  }
 }
-
 
 function editCompra(id){
   const c=DB.purchases.find(x=>x.id===id);if(!c||c.estado==='recibido'){toastMsg('Solo se pueden editar pedidos pendientes','err');return;}
@@ -3101,8 +3115,9 @@ async function deleteCompra(id){
   if(prov&&prov.pagado>0)msg+='\n\n\u26a0\ufe0f Has abonado '+fmt$(prov.pagado)+' a '+prov.nombre+'.\nRecuerda solicitar devoluci\u00f3n si cancelas.';
   if(!confirm(msg))return;
   DB.purchases=DB.purchases.filter(x=>x.id!==id);
-  saveDB();markPending();await saveToGoogle();
   closeM('m-compra-new');renderCompras();toastMsg('Pedido eliminado');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
+  _recibiendo=false;
 }
 
 function recibirCompra(id){
@@ -3133,7 +3148,9 @@ function recibirCompra(id){
 }
 
 async function confirmarRecepcion(id){
-  const c=DB.purchases.find(x=>x.id===id);if(!c)return;
+  if(_recibiendo)return;_recibiendo=true;
+  const c=DB.purchases.find(x=>x.id===id);
+  if(!c){_recibiendo=false;return;}
   const udsRec=parseInt(($$('rec-uds')||{}).value)||0;
   const fecha=cv('rec-fecha')||TODAY;
   const motivo=cv('rec-motivo')||'';
@@ -3187,9 +3204,10 @@ async function confirmarRecepcion(id){
 
   // STEP 5: Sync + Save
   syncMioFromInventory();syncProviderTotals();syncClientBalances();
-  saveDB();markPending();await saveToGoogle();
   closeM('m-recibir');renderCompras();renderInv();renderProv();
   toastMsg('Recepción confirmada','ok');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
+  _abonando=false;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3371,8 +3389,8 @@ async function saveVenta(){
   closeM('m-venta');
   sv('v-cli','');sv('v-prod','');sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');
   renderVentas();calcAlerts();
-  markPending();await saveToGoogle();
-  toastMsg('Venta registrada','ok');  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}
+  toastMsg('Venta registrada','ok');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}
 }
 
 
@@ -3411,8 +3429,7 @@ async function confirmarPago(){
     const _qc=v.quinc||200;const _pl=[];let _rr=_sr;let _ff=_px;let _ii=0;
     while(_rr>0&&_ii<24){const _mm=Math.min(_rr,_qc);_pl.push({fecha:normalizeDate(_ff),monto:_mm,tipo:'programado'});_rr=Math.round((_rr-_mm)*100)/100;const _ddd=new Date(_ff);_ddd.setDate(_ddd.getDate()+15);_ff=_ddd.toISOString().split('T')[0];_ii++;}
     v.plan_pagos=_pl;}
-  syncClientBalances();saveDB();markPending();await saveToGoogle();
-  closeM('m-pago');renderVentas();calcAlerts();toastMsg('Pago de '+fmt$(ap)+' registrado','ok');  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Aplicar pago';}
+  syncClientBalances();closeM('m-pago');renderVentas();calcAlerts();toastMsg('Pago de '+fmt$(ap)+' registrado','ok');saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Aplicar pago';}
 }
 
 
@@ -3464,13 +3481,15 @@ async function confirmarEntrega(){
   }else{
     const inv=DB.inventory.find(i=>i.id===v.invId);descontarInv(inv,ent,v.cliente+' #'+v.id);
   }
-  saveDB();markPending();await saveToGoogle();
-  closeM('m-entrega');renderVentas();renderInv();calcAlerts();toastMsg(ent+' unidad(es) entregadas','ok');  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Confirmar entrega';}
+  closeM('m-entrega');renderVentas();renderInv();calcAlerts();toastMsg(ent+' unidad(es) entregadas','ok');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Confirmar entrega';}
 }
 
 
+let _deleting=false;
 async function deleteVenta(id){
-  const v=DB.sales.find(x=>x.id===id);if(!v)return;
+  if(_deleting)return;_deleting=true;
+  const v=DB.sales.find(x=>x.id===id);if(!v){_deleting=false;return;}
   const totalPagado=v.pagado||0;
   if(totalPagado>0){
     if(!confirm('\u00bfEliminar esta venta?\n\n\u26a0\ufe0f El cliente ha pagado '+fmt$(totalPagado)+'.\nDeber\u00e1s devolverle ese monto.'))return;
@@ -3501,8 +3520,8 @@ async function deleteVenta(id){
     });
   }
   DB.sales=DB.sales.filter(x=>x.id!==id);
-  syncClientBalances();saveDB();markPending();await saveToGoogle();
-  renderVentas();calcAlerts();toastMsg('Venta eliminada');
+  syncClientBalances();renderVentas();calcAlerts();toastMsg('Venta eliminada');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
 }
 
 function waPlanCliente(cliId){
@@ -3621,39 +3640,56 @@ function calcEditVentaTotal(){
   renderEditCalPagos();
 }
 async function guardarEditVenta(){
-  const id=parseInt(cv('ev-vid'));const v=DB.sales.find(x=>x.id===id);if(!v)return;
-  const motivo=(cv('ev-motivo')||'').trim();if(!motivo){toastMsg('Escribe el motivo del ajuste','err');return;}
+  const id=parseInt(cv('ev-vid'));
+  const v=DB.sales.find(x=>x.id===id);if(!v)return;
+  // Validate first
+  const motivo=(cv('ev-motivo')||'').trim();
+  if(!motivo){toastMsg('Escribe el motivo del ajuste','err');return;}
   const nuPrecioU=parseFloat(($$('ev-precio-u')||{}).value)||0;
   const nuUds=parseInt(($$('ev-uds')||{}).value)||1;
   const nuDesc=parseFloat(($$('ev-desc')||{}).value)||0;
   const nuTotal=Math.max(0,nuUds*nuPrecioU-nuDesc);
   const nuQuinc=parseFloat(($$('ev-quinc')||{}).value)||200;
   const nuObs=cv('ev-obs')||'';
-  if(!v.ajustes)v.ajustes=[];
-  v.ajustes.push({fecha:TODAY,totalAntes:v.total,totalDespues:nuTotal,precioUAntes:v.precioU,precioUDespues:nuPrecioU,udsAntes:v.uds,udsDespues:nuUds,descAntes:v.descuento,descDespues:nuDesc,motivo});
-  // Adjust comprometidas in inventory if uds changed
-  if(nuUds!==v.uds){
-    const diff=nuUds-v.uds;
-    if(!v.esPaquete&&v.invId){
-      const inv=DB.inventory.find(i=>i.id===v.invId);
-      if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)+diff);
-    }else if(v.pkgProds){
-      v.pkgProds.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);
-        if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)+(pp.uds||1)*diff);});
+  // Disable btn after validation
+  const _btn=$$('btn-guardar-edit-venta');
+  if(_btn&&_btn.disabled)return;
+  if(_btn){_btn.disabled=true;_btn.textContent='Guardando…';}
+  try{
+    if(!v.ajustes)v.ajustes=[];
+    v.ajustes.push({fecha:TODAY,totalAntes:v.total,totalDespues:nuTotal,
+      precioUAntes:v.precioU,precioUDespues:nuPrecioU,
+      udsAntes:v.uds,udsDespues:nuUds,descAntes:v.descuento,descDespues:nuDesc,motivo});
+    if(nuUds!==v.uds){
+      const diff=nuUds-v.uds;
+      if(!v.esPaquete&&v.invId){
+        const inv=DB.inventory.find(i=>i.id===v.invId);
+        if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)+diff);
+      }else if(v.pkgProds){
+        v.pkgProds.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);
+          if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)+(pp.uds||1)*diff);});
+      }
     }
+    v.precioU=nuPrecioU;v.uds=nuUds;v.descuento=nuDesc;v.total=nuTotal;v.quinc=nuQuinc;v.observaciones=nuObs;
+    if(v.pagado>v.total)v.pagado=v.total;
+    if(v.pagado>=v.total){v.prox='-';v.plan_pagos=[];}
+    else{
+      const _fp2=$$('ev-fprimer')?.value;
+      if(_fp2){v.prox=normalizeDate(_fp2);
+        const _q2=v.quinc||200;const _pl2=[];let _r2=v.total-v.pagado;let _f2=_fp2;let _i2=0;
+        while(_r2>0&&_i2<24){const _pm2=Math.min(_r2,_q2);_pl2.push({fecha:normalizeDate(_f2),monto:_pm2,tipo:'programado'});_r2=Math.round((_r2-_pm2)*100)/100;const _dd2=new Date(_f2);_dd2.setDate(_dd2.getDate()+15);_f2=_dd2.toISOString().split('T')[0];_i2++;}
+        v.plan_pagos=_pl2;}
+    }
+    syncClientBalances();
+    closeM('m-edit-venta');
+    renderVentas();calcAlerts();
+    saveDB();markPending();
+    toastMsg('Venta actualizada','ok');
+    saveToGoogle().catch(e=>console.warn('Sync error:',e));
+  
+  }finally{
+    if(_btn){_btn.disabled=false;_btn.textContent='Guardar cambios';}
   }
-  v.precioU=nuPrecioU;v.uds=nuUds;v.descuento=nuDesc;v.total=nuTotal;v.quinc=nuQuinc;v.observaciones=nuObs;
-  if(v.pagado>v.total)v.pagado=v.total;
-  if(v.pagado>=v.total){v.prox='-';v.plan_pagos=[];}
-  else{
-    const _fp2=$$('ev-fprimer')?.value;
-    if(_fp2){v.prox=normalizeDate(_fp2);
-      const _q2=v.quinc||200;const _pl2=[];let _r2=v.total-v.pagado;let _f2=_fp2;let _i2=0;
-      while(_r2>0&&_i2<24){const _pm2=Math.min(_r2,_q2);_pl2.push({fecha:normalizeDate(_f2),monto:_pm2,tipo:'programado'});_r2=Math.round((_r2-_pm2)*100)/100;const _dd2=new Date(_f2);_dd2.setDate(_dd2.getDate()+15);_f2=_dd2.toISOString().split('T')[0];_i2++;}
-      v.plan_pagos=_pl2;}
-  }
-  syncClientBalances();saveDB();markPending();await saveToGoogle();
-  closeM('m-edit-venta');renderVentas();calcAlerts();toastMsg('Venta actualizada','ok');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3716,7 +3752,7 @@ async function saveCli(editId){
     DB.clients.push({id:NID++,nombre:n,tel:cv('cli-t'),ciudad:cv('cli-c'),notas:cv('cli-no'),compras:0,saldo:0});
     toastMsg('Cliente guardado','ok');
   }
-  saveDB();markPending();await saveToGoogle();closeM('m-cli');renderCli();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
+  closeM('m-cli');renderCli();saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
 
 
@@ -3831,7 +3867,7 @@ async function saveProv(editId){
     DB.providers.push({id:NID++,nombre:n,tel:cv('pv-tel'),concepto:cv('pv-concepto'),total,pagado,tipo:cv('pv-tipo'),historial:[]});
     toastMsg('Proveedor guardado','ok');
   }
-  syncProviderTotals();saveDB();markPending();await saveToGoogle();closeM('m-prov');renderProv();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
+  syncProviderTotals();closeM('m-prov');renderProv();saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
 
 
@@ -3856,7 +3892,9 @@ function abonarProv(id){
   $$('m-recibir').innerHTML=html;openM('m-recibir');
 }
 async function confirmarAbonoProv(id){
-  const p=DB.providers.find(x=>x.id===id);if(!p)return;
+  if(_abonando)return;_abonando=true;
+  const p=DB.providers.find(x=>x.id===id);
+  if(!p){_abonando=false;return;}
   const monto=parseFloat($$('ab-monto')?.value);
   if(!monto||monto<=0){toastMsg('Ingresa un monto válido','err');return;}
   const saldo=p.total-p.pagado;
@@ -3868,8 +3906,8 @@ async function confirmarAbonoProv(id){
   DB.payments_prov=(DB.payments_prov||[]);
   DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',motivo});
   closeM('m-recibir');
-  syncProviderTotals();saveDB();markPending();await saveToGoogle();
-  renderProv();toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
+  syncProviderTotals();renderProv();toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
 }
 
 function ajustarProv(id){
@@ -3901,7 +3939,9 @@ function ajustarProv(id){
   openM('m-recibir');
 }
 async function confirmarAjusteProv(id){
-  const p=DB.providers.find(x=>x.id===id);if(!p)return;
+  if(_ajustando)return;_ajustando=true;
+  const p=DB.providers.find(x=>x.id===id);
+  if(!p){_ajustando=false;return;}
   const monto=parseFloat($$('aj-monto')?.value);
   if(isNaN(monto)||monto===0){toastMsg('Ingresa un monto válido','err');return;}
   const motivo=($$('aj-motivo')?.value||'').trim();
@@ -3912,8 +3952,10 @@ async function confirmarAjusteProv(id){
   p.historial.push({tipo:'ajuste',fecha:TODAY,monto,motivo:'Ajuste: '+motivo+' ('+fmt$(p.total)+' → '+fmt$(nuTotal)+')'});
   p.total=nuTotal;
   closeM('m-recibir');
-  syncProviderTotals();saveDB();markPending();await saveToGoogle();renderProv();
+  syncProviderTotals();renderProv();
   toastMsg('Deuda ajustada a '+fmt$(nuTotal),'ok');
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
+  _ajustando=false;
 }
 function openProvDetalle(id){
   const p=DB.providers.find(x=>x.id===id);if(!p)return;
@@ -4047,7 +4089,7 @@ async function savePkg(){
     status:cv('pk-status')||'activo',fechaIni:cvDate('pk-fini')||'',fechaFin:cvDate('pk-ffin')||''};
   if(eid){const pk=DB.packages.find(x=>x.id===parseInt(eid));if(!pk)return;Object.assign(pk,obj);toastMsg('Paquete actualizado','ok');}
   else{DB.packages.push({id:NID++,...obj});toastMsg('Paquete creado','ok');}
-  sv('pk-eid','');_pkgProdsEdit=[];saveDB();markPending();await saveToGoogle();closeM('m-pkg-new');renderPkg();  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
+  sv('pk-eid','');_pkgProdsEdit=[];closeM('m-pkg-new');renderPkg();saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
 }
 
 
