@@ -2974,6 +2974,7 @@ async function saveCompra(){
   sv('cp-eid','');
   const _cpd=$$('cp-del-btn');if(_cpd)_cpd.style.display='none';
   const _cpr=$$('cp-razon-row');if(_cpr)_cpr.style.display='none';
+  syncProviderTotals();
   saveDB();closeM('m-compra-new');renderCompras();
   markPending();await saveToGoogle();
 }
@@ -3106,37 +3107,61 @@ function recibirCompra(id){
 async function confirmarRecepcion(id){
   const c=DB.purchases.find(x=>x.id===id);if(!c)return;
   const udsRec=parseInt(($$('rec-uds')||{}).value)||0;
-  const fecha=cv('rec-fecha')||TODAY;const motivo=cv('rec-motivo')||'';
-  // Mark as received
-  c.estado='recibido';c.fechaRec=normalizeDate(fecha);c.udsRecibidas=udsRec;c.motivoDiff=motivo;
+  const fecha=cv('rec-fecha')||TODAY;
+  const motivo=cv('rec-motivo')||'';
+
+  // STEP 1: Calculate real amounts FIRST before any inventory/provider operations
+  const costoUnit=c.uds>0?c.total/c.uds:0;
+  const montoReal=Math.round(costoUnit*udsRec*100)/100;
+  const hayAjuste=udsRec!==c.uds;
+
+  // STEP 2: Update purchase record
+  c.estado='recibido';
+  c.fechaRec=normalizeDate(fecha);
+  c.udsRecibidas=udsRec;
+  c.motivoDiff=motivo;
+  c.total=montoReal;
   c.confirmaciones=(c.confirmaciones||[]);
   c.confirmaciones.push({fecha:normalizeDate(fecha),udsRecibidas:udsRec,udsPedidas:c.uds,diferencia:udsRec-c.uds,motivo});
-  // Auto-resolve inventory: find matching line (same product+tipo+pres)
+
+  // STEP 3: Auto-resolve inventory using corrected costoUnit
   const _matchInv=DB.inventory.find(i=>i.pid===c.prodId&&i.tipo===c.tipo&&i.pres===c.pres);
+  const _invMotivo='Recepcion compra #'+c.id
+    +(hayAjuste?' (pedido: '+c.uds+', recibido: '+udsRec+')':'')
+    +(motivo?' — '+motivo:'');
   if(_matchInv){
-    // Existing line: add units + register adjustment
     const _antes=_matchInv.stock;
     _matchInv.stock+=udsRec;
-    // Update costo only if no previous stock (avoids overwriting curated cost)
     if(_antes===0)_matchInv.costo=c.costo;
     if(!_matchInv.ajustes)_matchInv.ajustes=[];
-    _matchInv.ajustes.push({fecha:normalizeDate(fecha),stockAntes:_antes,stockDespues:_matchInv.stock,diferencia:udsRec,motivo:'Recepcion compra #'+c.id+(udsRec!==c.uds?' (pedido: '+c.uds+')':'')});
+    _matchInv.ajustes.push({fecha:normalizeDate(fecha),stockAntes:_antes,stockDespues:_matchInv.stock,diferencia:udsRec,motivo:_invMotivo});
   }else{
-    // No matching line: create new one automatically
     const prod=DB.products.find(p=>p.id===c.prodId);
+    const _precioSug=Math.round(costoUnit*1.5);  // uses corrected costoUnit
     DB.inventory.push({id:NID++,pid:c.prodId,
       nombre:c.producto,marca:prod?arr(prod.marca)[0]||prod.marca||'':'',
       tipo:c.tipo,pres:c.pres,
-      stock:udsRec,costo:c.costo,precio:Math.round(c.total/c.uds*1.5),
+      stock:udsRec,costo:c.costo,precio:_precioSug,
       nota:'Creado desde compra #'+c.id,
       consig:false,cuds:0,cprecio:0,cprov:'',ccom:0,ccond:'',cvenc:'',comprometidas:0,
-      ajustes:[{fecha:normalizeDate(fecha),stockAntes:0,stockDespues:udsRec,diferencia:udsRec,motivo:'Recepcion compra #'+c.id}]});
+      ajustes:[{fecha:normalizeDate(fecha),stockAntes:0,stockDespues:udsRec,diferencia:udsRec,motivo:_invMotivo}]});
   }
-  // Update provider debt
+
+  // STEP 4: Update provider history with real amount
   const prov=DB.providers.find(p=>p.id===c.provId);
-  if(prov){prov.total=(prov.total||0)+c.total;prov.historial=(prov.historial||[]);prov.historial.push({tipo:'compra_recibida',fecha,monto:c.total,motivo:c.producto+' x'+udsRec});}
+  if(prov){
+    prov.historial=(prov.historial||[]);
+    let histMotivo=c.producto+' x'+udsRec;
+    if(hayAjuste)histMotivo+=' (pedido: '+c.uds+' \u2014 diferencia: '+(udsRec-c.uds)+' uds, monto: '+fmt$(montoReal)+')';
+    if(motivo)histMotivo+=' | '+motivo;
+    prov.historial.push({tipo:'compra_recibida',fecha:normalizeDate(fecha),monto:montoReal,motivo:histMotivo});
+  }
+
+  // STEP 5: Sync + Save
   syncMioFromInventory();syncProviderTotals();syncClientBalances();
-  saveDB();markPending();await saveToGoogle();closeM('m-recibir');renderCompras();renderInv();renderProv();toastMsg('Recepci\u00f3n confirmada','ok');
+  saveDB();markPending();await saveToGoogle();
+  closeM('m-recibir');renderCompras();renderInv();renderProv();
+  toastMsg('Recepción confirmada','ok');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3298,7 +3323,7 @@ async function saveVenta(){
     const venta={id:NID++,fecha:cv('v-fecha')||TODAY,cliente:cli.nombre,clienteId:cliId,
       producto:pkg.nombre,invId:null,pkgId,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:true,observaciones:obs,
-      pagos:ant>0?[{fecha:TODAY,monto:ant}]:[],pkgProds:pkg.prods,ajustes:[]};
+      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real'}]:[],pkgProds:pkg.prods,ajustes:[]};
     pkg.prods.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);if(inv)inv.comprometidas=(inv.comprometidas||0)+(pp.uds||1)*uds;});
     DB.sales.push(venta);
   }else{
@@ -3307,7 +3332,7 @@ async function saveVenta(){
     DB.sales.push({id:NID++,fecha:cv('v-fecha')||TODAY,cliente:cli.nombre,clienteId:cliId,
       producto:inv.nombre+' '+inv.tipo+' '+inv.pres,invId,pkgId:null,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:false,observaciones:obs,
-      pagos:ant>0?[{fecha:TODAY,monto:ant}]:[],pkgProds:[],ajustes:[]});
+      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real'}]:[],pkgProds:[],ajustes:[]});
     inv.comprometidas=(inv.comprometidas||0)+uds;
   }
   syncClientBalances();saveDB();
@@ -3379,19 +3404,25 @@ async function confirmarEntrega(){
   const max=v.uds-(v.entregadas||0);const ent=Math.min(uds,max);
   v.entregadas=(v.entregadas||0)+ent;
   // Priorizar consignación primero, luego propio
-  function descontarInv(inv,q){
-    if(!inv)return;
+  function descontarInv(inv,q,ventaInfo){
+    if(!inv||q<=0)return;
     let restante=q;
+    const stockAntes=inv.stock;const cudsAntes=inv.cuds||0;
     // Primero consig
     if(inv.cuds>0){const qc=Math.min(restante,inv.cuds);inv.cuds=Math.max(0,inv.cuds-qc);restante-=qc;}
     // Luego propio
     if(restante>0){inv.stock=Math.max(0,inv.stock-restante);}
     inv.comprometidas=Math.max(0,(inv.comprometidas||0)-q);
+    // Register adjustment in inventory history
+    if(!inv.ajustes)inv.ajustes=[];
+    const totalDesc=stockAntes-inv.stock+(cudsAntes-(inv.cuds||0));
+    if(totalDesc!==0)inv.ajustes.push({fecha:TODAY,stockAntes,stockDespues:inv.stock,
+      diferencia:-totalDesc,motivo:'Entrega venta'+(ventaInfo?' — '+ventaInfo:'')});
   }
   if(v.esPaquete&&v.pkgProds){
-    v.pkgProds.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);descontarInv(inv,(pp.uds||1)*ent);});
+    v.pkgProds.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);descontarInv(inv,(pp.uds||1)*ent,v.cliente+' #'+v.id);});
   }else{
-    const inv=DB.inventory.find(i=>i.id===v.invId);descontarInv(inv,ent);
+    const inv=DB.inventory.find(i=>i.id===v.invId);descontarInv(inv,ent,v.cliente+' #'+v.id);
   }
   saveDB();markPending();await saveToGoogle();
   closeM('m-entrega');renderVentas();renderInv();calcAlerts();toastMsg(ent+' unidad(es) entregadas','ok');
@@ -3405,8 +3436,29 @@ async function deleteVenta(id){
   }else{
     if(!confirm('\u00bfEliminar esta venta? No tiene pagos.'))return;
   }
-  if(!v.esPaquete&&v.invId){const inv=DB.inventory.find(i=>i.id===v.invId);if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)-v.uds);}
-  else if(v.pkgProds)(v.pkgProds||[]).forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)-(pp.uds||1)*v.uds);});
+  // Revert inventory: release comprometidas + restore stock for already-delivered units
+  const _ent=v.entregadas||0;
+  function revertInv(inv,qComp,qEnt,info){
+    if(!inv)return;
+    inv.comprometidas=Math.max(0,(inv.comprometidas||0)-qComp);
+    if(qEnt>0){
+      const antes=inv.stock;
+      inv.stock+=qEnt;
+      if(!inv.ajustes)inv.ajustes=[];
+      inv.ajustes.push({fecha:TODAY,stockAntes:antes,stockDespues:inv.stock,
+        diferencia:qEnt,motivo:'Reverso por eliminación de venta'+(info?' ('+info+')':'')});
+    }
+  }
+  if(!v.esPaquete&&v.invId){
+    const inv=DB.inventory.find(i=>i.id===v.invId);
+    revertInv(inv,v.uds-_ent,_ent,v.cliente+' #'+v.id);
+  }else if(v.pkgProds){
+    (v.pkgProds||[]).forEach(pp=>{
+      const inv=DB.inventory.find(i=>i.id===pp.invId);
+      const ppU=pp.uds||1;
+      revertInv(inv,(v.uds-_ent)*ppU,_ent*ppU,v.cliente+' #'+v.id);
+    });
+  }
   DB.sales=DB.sales.filter(x=>x.id!==id);
   syncClientBalances();saveDB();markPending();await saveToGoogle();
   renderVentas();calcAlerts();toastMsg('Venta eliminada');
@@ -3516,6 +3568,17 @@ async function guardarEditVenta(){
   const nuObs=cv('ev-obs')||'';
   if(!v.ajustes)v.ajustes=[];
   v.ajustes.push({fecha:TODAY,totalAntes:v.total,totalDespues:nuTotal,precioUAntes:v.precioU,precioUDespues:nuPrecioU,udsAntes:v.uds,udsDespues:nuUds,descAntes:v.descuento,descDespues:nuDesc,motivo});
+  // Adjust comprometidas in inventory if uds changed
+  if(nuUds!==v.uds){
+    const diff=nuUds-v.uds;
+    if(!v.esPaquete&&v.invId){
+      const inv=DB.inventory.find(i=>i.id===v.invId);
+      if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)+diff);
+    }else if(v.pkgProds){
+      v.pkgProds.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);
+        if(inv)inv.comprometidas=Math.max(0,(inv.comprometidas||0)+(pp.uds||1)*diff);});
+    }
+  }
   v.precioU=nuPrecioU;v.uds=nuUds;v.descuento=nuDesc;v.total=nuTotal;v.quinc=nuQuinc;v.observaciones=nuObs;
   if(v.pagado>v.total)v.pagado=v.total;
   if(v.pagado>=v.total){v.prox='-';v.plan_pagos=[];}
@@ -3704,12 +3767,38 @@ async function saveProv(editId){
 function abonarProv(id){
   const p=DB.providers.find(x=>x.id===id);if(!p)return;
   const saldo=p.total-p.pagado;
-  const monto=parseFloat(prompt(`Abono a ${p.nombre}\nSaldo actual: ${fmt$(saldo)}\n\nMonto del abono ($):`));
-  if(!monto||monto<=0){toastMsg('Monto inv\u00e1lido','err');return;}
-  p.pagado=(p.pagado||0)+Math.min(monto,saldo);
-  p.historial=(p.historial||[]);p.historial.push({tipo:'abono',fecha:TODAY,monto,motivo:'Abono manual'});
-  DB.payments_prov=(DB.payments_prov||[]);DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',motivo:'Abono manual'});
-  syncProviderTotals();saveDB();markPending();saveToGoogle().then(()=>renderProv()).catch(()=>renderProv());toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
+  if(saldo<=0){toastMsg('Este proveedor no tiene saldo pendiente','ok');return;}
+  const html='<div style="background:var(--surf);border-radius:var(--r);padding:18px;border:.5px solid var(--bord2);width:min(360px,100%)">'
+    +'<div class="mhdr"><h3>Registrar abono</h3><button class="mx" onclick="closeM(\'m-recibir\')">\u00d7</button></div>'
+    +'<div style="background:var(--surf2);border-radius:var(--rs);padding:9px 12px;margin-bottom:12px;font-size:13px">'
+    +'<strong>'+p.nombre+'</strong><br>'
+    +'<span style="color:var(--mist);font-size:12px">Saldo pendiente: '+fmt$(saldo)+'</span></div>'
+    +'<div class="fg"><label>Monto del abono ($)</label>'
+    +'<input type="number" id="ab-monto" placeholder="0.00" step="0.01" max="'+saldo+'">'
+    +'<div class="fn">Máximo: '+fmt$(saldo)+'</div></div>'
+    +'<div class="fg"><label>Motivo / referencia</label>'
+    +'<input type="text" id="ab-motivo" placeholder="Ej: Transferencia SPEI, efectivo..."></div>'
+    +'<div class="mfoot">'
+    +'<button class="btn btn-outline" onclick="closeM(\'m-recibir\')">Cancelar</button>'
+    +'<button class="btn btn-gold" onclick="confirmarAbonoProv('+id+')">Registrar abono</button>'
+    +'</div></div>';
+  $$('m-recibir').innerHTML=html;openM('m-recibir');
+}
+async function confirmarAbonoProv(id){
+  const p=DB.providers.find(x=>x.id===id);if(!p)return;
+  const monto=parseFloat($$('ab-monto')?.value);
+  if(!monto||monto<=0){toastMsg('Ingresa un monto válido','err');return;}
+  const saldo=p.total-p.pagado;
+  if(monto>saldo){toastMsg('El abono no puede superar el saldo','err');return;}
+  const motivo=($$('ab-motivo')?.value||'Abono manual').trim();
+  p.pagado=(p.pagado||0)+monto;
+  p.historial=(p.historial||[]);
+  p.historial.push({tipo:'abono',fecha:TODAY,monto,motivo});
+  DB.payments_prov=(DB.payments_prov||[]);
+  DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',motivo});
+  closeM('m-recibir');
+  syncProviderTotals();saveDB();markPending();await saveToGoogle();
+  renderProv();toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
 }
 
 function ajustarProv(id){
