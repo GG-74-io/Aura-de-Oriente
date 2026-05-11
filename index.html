@@ -1164,6 +1164,19 @@ DB.products.forEach(p=>{
   }
 });
 
+function syncProviderTotals(){
+  DB.providers.forEach(prov=>{
+    // Recalculate total from received purchases
+    const received=DB.purchases.filter(c=>c.provId===prov.id&&c.estado==='recibido');
+    let base=received.reduce((a,c)=>a+(c.total||0),0);
+    // Add manual adjustments on top
+    (prov.historial||[]).filter(h=>h.tipo==='ajuste').forEach(a=>base+=(a.monto||0));
+    prov.total=Math.max(0,base);
+    // Recalculate pagado from registered payments
+    prov.pagado=(DB.payments_prov||[]).filter(p=>p.provId===prov.id&&p.tipo==='abono')
+      .reduce((a,p)=>a+(p.monto||0),0);
+  });
+}
 function syncClientBalances(){
   DB.clients.forEach(c=>{
     const cs=DB.sales.filter(s=>s.clienteId===c.id);
@@ -1615,16 +1628,18 @@ $$('content').addEventListener('touchstart',e=>{
   _tsY=e.touches[0].clientY;
   _swipeTarget=e.target;
   _swipeCancelled=false;
-  const sc=_swipeTarget&&_swipeTarget.closest('.tw');
+  const sc=_swipeTarget&&_swipeTarget.closest('.tw,[style*="overflow-x:auto"]');
   _swipeScrollX=sc?sc.scrollLeft:0;
 },{passive:true});
 $$('content').addEventListener('touchmove',e=>{
   if(_swipeCancelled)return;
-  if(_swipeTarget&&_swipeTarget.closest('.tw')){
-    const sc=_swipeTarget.closest('.tw');
-    if(sc&&sc.scrollLeft!==_swipeScrollX){_swipeCancelled=true;return;}
-    const cx=e.touches[0].clientX-_tsX,cy=e.touches[0].clientY-_tsY;
-    if(Math.abs(cx)>Math.abs(cy)*0.5)_swipeCancelled=true;
+  // Cancel in .tw tables AND any overflow-x:auto container (reportes menu)
+  const _sc=_swipeTarget&&_swipeTarget.closest('.tw,[style*="overflow-x:auto"]');
+  if(_sc){
+    const _cx=e.touches[0].clientX-_tsX,_cy=e.touches[0].clientY-_tsY;
+    if(_sc.scrollLeft!==_swipeScrollX||Math.abs(_cx)>Math.abs(_cy)*0.4){
+      _swipeCancelled=true;return;
+    }
   }
 },{passive:true});
 $$('content').addEventListener('touchend',e=>{
@@ -2914,7 +2929,7 @@ function renderCompras(){
       <td>${pill}</td>
       <td style="font-size:11px">${c.fechaRec?fmtDate(c.fechaRec):'—'}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-outline btn-sm" onclick="editCompra(${c.id})">&#9999;</button>
+        ${c.estado!=='recibido'?`<button class="btn btn-outline btn-sm" onclick="editCompra(${c.id})">&#9999;</button>`:''}
         ${c.estado!=='recibido'?`<button class="btn btn-ok btn-sm" onclick="recibirCompra(${c.id})">Recibir</button>`:''}
         ${(c.historial&&c.historial.length)?`<button class="btn btn-outline btn-sm" onclick="openCompraHistorial(${c.id})" title="Historial">&#128203;</button>`:''}
         ${c.estado!=='recibido'?`<button class="btn btn-danger btn-sm" onclick="deleteCompra(${c.id})" title="Eliminar pedido">&#128465;</button>`:''}
@@ -3063,23 +3078,24 @@ async function deleteCompra(id){
 
 function recibirCompra(id){
   const c=DB.purchases.find(x=>x.id===id);if(!c)return;
+  // Find matching inventory line: same product + tipo + pres
+  const _match=DB.inventory.find(i=>i.pid===c.prodId&&i.tipo===c.tipo&&i.pres===c.pres);
+  const _invMsg=_match
+    ?'<div style="background:rgba(42,95,95,.07);border:.5px solid rgba(42,95,95,.2);border-radius:var(--rs);padding:8px 12px;font-size:12px;margin-bottom:10px">'
+     +'ℹ️ Se sumarán al inventario: '+_match.tipo+' '+_match.pres+' (stock actual: '+_match.stock+')</div>'
+    :'<div style="background:rgba(201,146,42,.07);border:.5px solid rgba(201,146,42,.2);border-radius:var(--rs);padding:8px 12px;font-size:12px;margin-bottom:10px">'
+     +'ℹ️ No existe línea para '+c.tipo+' '+c.pres+'. Se creará automáticamente.</div>';
   const html=`<div style="background:var(--surf);border-radius:var(--r);padding:18px"><div class="mhdr"><h3>Confirmar recepci\u00f3n</h3><button class="mx" onclick="closeM('m-recibir')">\u2715</button></div>
-    <div style="background:var(--surf2);border-radius:var(--rs);padding:10px;margin-bottom:11px;font-size:13px">
+    <div style="background:var(--surf2);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:13px">
       <strong>${c.producto}</strong> — ${c.proveedor}<br>
       <span style="color:var(--mist);font-size:12px">Pedido: ${c.uds} uds | ${fmt$(c.total)}</span>
     </div>
+    ${_invMsg}
     <div class="f2">
       <div class="fg"><label>Uds. recibidas</label><input type="number" id="rec-uds" value="${c.uds}" min="0"></div>
-      <div class="fg"><label>Fecha recepci\u00f3n</label><input type="date" id="rec-fecha" value="${TODAY}"></div>
+      <div class="fg"><label>Fecha recepci\u00f3n</label><input type="date" id="rec-fecha" value="${TODAY_ISO}"></div>
     </div>
     <div class="fg"><label>Motivo de diferencia (si aplica)</label><input type="text" id="rec-motivo" placeholder="Opcional..."></div>
-    <div class="fg"><label>Agregar al inventario</label>
-      <select id="rec-inv">
-        <option value="">No agregar / ya existe</option>
-        ${DB.inventory.filter(i=>i.pid===c.prodId).map(i=>`<option value="${i.id}">Agregar a: ${i.tipo} ${i.pres} (actual: ${i.stock})</option>`).join('')}
-        <option value="new">Crear nueva l\u00ednea de inventario</option>
-      </select>
-    </div>
     <div class="mfoot">
       <button class="btn btn-outline" onclick="closeM('m-recibir')">Cancelar</button>
       <button class="btn btn-gold" onclick="confirmarRecepcion(${id})">Confirmar recepci\u00f3n</button>
@@ -3091,25 +3107,35 @@ async function confirmarRecepcion(id){
   const c=DB.purchases.find(x=>x.id===id);if(!c)return;
   const udsRec=parseInt(($$('rec-uds')||{}).value)||0;
   const fecha=cv('rec-fecha')||TODAY;const motivo=cv('rec-motivo')||'';
-  const invSel=cv('rec-inv');
   // Mark as received
-  c.estado='recibido';c.fechaRec=fecha;c.udsRecibidas=udsRec;c.motivoDiff=motivo;
+  c.estado='recibido';c.fechaRec=normalizeDate(fecha);c.udsRecibidas=udsRec;c.motivoDiff=motivo;
   c.confirmaciones=(c.confirmaciones||[]);
-  c.confirmaciones.push({fecha,udsRecibidas:udsRec,udsPedidas:c.uds,diferencia:udsRec-c.uds,motivo});
-  // Update inventory if selected
-  if(invSel==='new'){
+  c.confirmaciones.push({fecha:normalizeDate(fecha),udsRecibidas:udsRec,udsPedidas:c.uds,diferencia:udsRec-c.uds,motivo});
+  // Auto-resolve inventory: find matching line (same product+tipo+pres)
+  const _matchInv=DB.inventory.find(i=>i.pid===c.prodId&&i.tipo===c.tipo&&i.pres===c.pres);
+  if(_matchInv){
+    // Existing line: add units + register adjustment
+    const _antes=_matchInv.stock;
+    _matchInv.stock+=udsRec;
+    // Update costo only if no previous stock (avoids overwriting curated cost)
+    if(_antes===0)_matchInv.costo=c.costo;
+    if(!_matchInv.ajustes)_matchInv.ajustes=[];
+    _matchInv.ajustes.push({fecha:normalizeDate(fecha),stockAntes:_antes,stockDespues:_matchInv.stock,diferencia:udsRec,motivo:'Recepcion compra #'+c.id+(udsRec!==c.uds?' (pedido: '+c.uds+')':'')});
+  }else{
+    // No matching line: create new one automatically
     const prod=DB.products.find(p=>p.id===c.prodId);
-    DB.inventory.push({id:NID++,pid:c.prodId,nombre:c.producto,marca:prod?arr(prod.marca)[0]||prod.marca||'':'',
-      tipo:c.tipo,pres:c.pres,stock:udsRec,costo:c.costo,precio:c.total/c.uds,nota:'De compra #'+c.id,
+    DB.inventory.push({id:NID++,pid:c.prodId,
+      nombre:c.producto,marca:prod?arr(prod.marca)[0]||prod.marca||'':'',
+      tipo:c.tipo,pres:c.pres,
+      stock:udsRec,costo:c.costo,precio:Math.round(c.total/c.uds*1.5),
+      nota:'Creado desde compra #'+c.id,
       consig:false,cuds:0,cprecio:0,cprov:'',ccom:0,ccond:'',cvenc:'',comprometidas:0,
-      ajustes:[{fecha,stockAntes:0,stockDespues:udsRec,diferencia:udsRec,motivo:'Recepcion compra #'+c.id}]});
-  }else if(invSel){
-    const inv=DB.inventory.find(i=>i.id===parseInt(invSel));
-    if(inv){const antes=inv.stock;inv.stock+=udsRec;inv.ajustes=(inv.ajustes||[]);inv.ajustes.push({fecha,stockAntes:antes,stockDespues:inv.stock,diferencia:udsRec,motivo:'Recepcion compra #'+c.id});}
+      ajustes:[{fecha:normalizeDate(fecha),stockAntes:0,stockDespues:udsRec,diferencia:udsRec,motivo:'Recepcion compra #'+c.id}]});
   }
   // Update provider debt
   const prov=DB.providers.find(p=>p.id===c.provId);
   if(prov){prov.total=(prov.total||0)+c.total;prov.historial=(prov.historial||[]);prov.historial.push({tipo:'compra_recibida',fecha,monto:c.total,motivo:c.producto+' x'+udsRec});}
+  syncMioFromInventory();syncProviderTotals();syncClientBalances();
   saveDB();markPending();await saveToGoogle();closeM('m-recibir');renderCompras();renderInv();renderProv();toastMsg('Recepci\u00f3n confirmada','ok');
 }
 
@@ -3180,9 +3206,9 @@ function vRow(v){
       ${pend>0?`<button class="btn btn-outline btn-sm" onclick="abrirPago(${v.id})">+Pago</button>`:''}
         ${ent<v.uds?`<button class="btn btn-ok btn-sm" onclick="abrirEntrega(${v.id})">Entregar</button>`:''}
         ${pend>0?`<button class="btn btn-wa btn-sm" onclick="waCobranza(${v.id})">WA</button>`:''}
-        <button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})">&#9999;</button>
+        ${(v.entregadas||0)<v.uds?`<button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})">&#9999;</button>`:''}
         ${(v.ajustes||[]).length>0?`<button class="btn btn-outline btn-sm" onclick="openHistorialVenta(${v.id})">Hist.</button>`:''}
-        <button class="btn btn-danger btn-sm" onclick="deleteVenta(${v.id})" title="Eliminar">&#128465;</button>
+        ${(v.entregadas||0)<v.uds?`<button class="btn btn-danger btn-sm" onclick="deleteVenta(${v.id})" title="Eliminar">&#128465;</button>`:''}
       </div>
     </td>
   </tr>`;
@@ -3445,6 +3471,9 @@ function waCobranza(id){
 
 function abrirEditVenta(id){
   const v=DB.sales.find(x=>x.id===id);if(!v)return;
+  if((v.entregadas||0)>=v.uds&&v.uds>0){
+    toastMsg('No se puede editar: mercancia ya entregada completamente','err');return;
+  }
   $$('ev-vid').value=id;
   $$('ev-resumen').innerHTML=`<strong>${v.producto}</strong> &nbsp;·&nbsp; Cliente: ${v.cliente}<br><span style="color:var(--mist);font-size:12px">Venta original: ${fmt$(v.total)} &nbsp;·&nbsp; Pagado: ${fmt$(v.pagado)}</span>`;
   sv('ev-precio-u',v.precioU||0);sv('ev-uds',v.uds||1);sv('ev-desc',v.descuento||0);sv('ev-quinc',v.quinc||200);sv('ev-obs',v.observaciones||'');sv('ev-motivo','');
@@ -3669,7 +3698,7 @@ async function saveProv(editId){
     DB.providers.push({id:NID++,nombre:n,tel:cv('pv-tel'),concepto:cv('pv-concepto'),total,pagado,tipo:cv('pv-tipo'),historial:[]});
     toastMsg('Proveedor guardado','ok');
   }
-  saveDB();markPending();await saveToGoogle();closeM('m-prov');renderProv();
+  syncProviderTotals();saveDB();markPending();await saveToGoogle();closeM('m-prov');renderProv();
 }
 
 function abonarProv(id){
@@ -3680,7 +3709,7 @@ function abonarProv(id){
   p.pagado=(p.pagado||0)+Math.min(monto,saldo);
   p.historial=(p.historial||[]);p.historial.push({tipo:'abono',fecha:TODAY,monto,motivo:'Abono manual'});
   DB.payments_prov=(DB.payments_prov||[]);DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',motivo:'Abono manual'});
-  saveDB();markPending();saveToGoogle().then(()=>renderProv()).catch(()=>renderProv());toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
+  syncProviderTotals();saveDB();markPending();saveToGoogle().then(()=>renderProv()).catch(()=>renderProv());toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
 }
 
 function ajustarProv(id){
@@ -3723,7 +3752,7 @@ async function confirmarAjusteProv(id){
   p.historial.push({tipo:'ajuste',fecha:TODAY,monto,motivo:'Ajuste: '+motivo+' ('+fmt$(p.total)+' → '+fmt$(nuTotal)+')'});
   p.total=nuTotal;
   closeM('m-recibir');
-  saveDB();markPending();await saveToGoogle();renderProv();
+  syncProviderTotals();saveDB();markPending();await saveToGoogle();renderProv();
   toastMsg('Deuda ajustada a '+fmt$(nuTotal),'ok');
 }
 function openProvDetalle(id){
@@ -4216,6 +4245,7 @@ else setSyncStatus('none');
 DB.inventory.forEach(i=>{i.comprometidas=getComprometidas(i.id);});
 
 syncClientBalances();
+syncProviderTotals();
 renderCatalog();
 calcAlerts();
 populateInvFilters();
