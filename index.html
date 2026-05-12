@@ -257,12 +257,14 @@ tbody tr:hover td{background:var(--surf2)}
           <button class="btn btn-outline btn-sm" onclick="openM('m-imagenes')">&#128247; Im&aacute;genes</button>
           <button class="btn btn-outline btn-sm" onclick="openImportWeb()">&#127760; Importar web</button>
           <button class="btn btn-gold btn-sm" onclick="openProductForm()">+ Agregar</button>
+          <select id="cat-sort-field" onchange="filterCatalog()" style="font-size:11px;padding:3px 5px"><option value="">Ordenar...</option><option value="nombre">Nombre</option><option value="precio">Precio</option><option value="marca">Marca</option><option value="genero">Género</option><option value="familia">Familia</option><option value="concentracion">Concentración</option><option value="imarca">Inspiración</option></select>
+          <select id="cat-sort-dir" onchange="filterCatalog()" style="font-size:11px;padding:3px 5px"><option value="asc">A↑</option><option value="desc">Z↓</option></select>
         </div>
       </div>
       <div class="fbar">
         <div class="fbar-r">
           <input id="q" type="text" placeholder="Buscar nombre, marca, notas..." oninput="filterCatalog()">
-          <select id="fq-fuente" onchange="filterCatalog()"><option value="">Fuente</option><option>Oud Miraj</option><option>Fragrantica</option><option>Proveedor propio</option><option>Otro</option></select>
+          <select id="fq-fuente" onchange="filterCatalog()"><option value="">Fuente</option></select>
           <select id="fq-marca" onchange="filterCatalog()"><option value="">Marca &aacute;rabe</option></select>
           <select id="fq-genero" onchange="filterCatalog()"><option value="">G&eacute;nero</option><option>Mujer</option><option>Hombre</option><option>Unisex</option></select>
           <select id="fq-familia" onchange="filterCatalog()"><option value="">Familia</option></select>
@@ -270,6 +272,15 @@ tbody tr:hover td{background:var(--surf2)}
           <select id="fq-uso" onchange="filterCatalog()"><option value="">Uso</option></select>
           <select id="fq-estado" onchange="filterCatalog()"><option value="">Todos los estados</option><option value="mio">Mi negocio</option><option value="fav">Favorito</option><option value="pros">Prospecto</option><option value="ver">Verificado</option><option value="nv">No vendible</option><option value="oculto">Oculto</option></select>
           <button class="btn btn-outline btn-sm" onclick="clearCatFilter()">Limpiar</button>
+        </div>
+        <div class="fbar-r" style="margin-top:6px">
+          <select id="fq-top" onchange="filterCatalog()"><option value="">Nota Salida</option></select>
+          <select id="fq-cor" onchange="filterCatalog()"><option value="">Nota Corazón</option></select>
+          <select id="fq-fondo" onchange="filterCatalog()"><option value="">Nota Fondo</option></select>
+          <select id="fq-conc" onchange="filterCatalog()"><option value="">Concentración</option></select>
+          <select id="fq-dur" onchange="filterCatalog()"><option value="">Duración</option></select>
+          <select id="fq-proy" onchange="filterCatalog()"><option value="">Proyección</option></select>
+          <select id="fq-temp" onchange="filterCatalog()"><option value="">Temporada</option></select>
         </div>
       </div>
       <div class="sel-bar" id="sel-bar" style="display:none">
@@ -296,8 +307,10 @@ tbody tr:hover td{background:var(--surf2)}
     <!-- ═══ MIS PRODUCTOS ═══ -->
     <div id="s-mis-prod" class="sec">
       <div class="sh">
-        <div class="sh-l"><h2>Mis Productos</h2><p>Solo perfumes en "Mi negocio"</p></div>
+        <div class="sh-l"><h2>Mis Productos</h2><p>Solo perfumes en "Mi negocio" &mdash; <span id="mis-count-total">0</span> producto(s)</p></div>
         <div class="sh-a">
+          <select id="mis-sort-field" onchange="renderMis()" style="font-size:11px;padding:3px 5px"><option value="">Ordenar...</option><option value="nombre">Nombre</option><option value="precio">Precio</option><option value="marca">Marca</option><option value="genero">Género</option><option value="familia">Familia</option><option value="concentracion">Concentración</option><option value="imarca">Inspiración</option></select>
+          <select id="mis-sort-dir" onchange="renderMis()" style="font-size:11px;padding:3px 5px"><option value="asc">A↑</option><option value="desc">Z↓</option></select>
           <button class="btn btn-outline btn-sm" onclick="openCompare()">&#9878; Comparar</button>
           <button class="btn btn-outline btn-sm" onclick="exportMisPDF()">PDF</button>
         </div>
@@ -317,6 +330,15 @@ tbody tr:hover td{background:var(--surf2)}
           <select id="mq-estado" onchange="renderMis()"><option value="">Todos los estados</option><option value="mio">Mi negocio</option><option value="fav">Favorito</option><option value="pros">Prospecto</option><option value="ver">Verificado</option><option value="nv">No vendible</option><option value="oculto">Oculto</option></select>
           <select id="mq-exist" onchange="renderMis()"><option value="">Todos</option><option value="1">Con existencia</option></select>
           <button class="btn btn-outline btn-sm" onclick="clearMisFilter()">Limpiar</button>
+        </div>
+        <div class="fbar-r" style="margin-top:6px">
+          <select id="mq-top" onchange="renderMis()"><option value="">Nota Salida</option></select>
+          <select id="mq-cor" onchange="renderMis()"><option value="">Nota Corazón</option></select>
+          <select id="mq-fondo" onchange="renderMis()"><option value="">Nota Fondo</option></select>
+          <select id="mq-conc" onchange="renderMis()"><option value="">Concentración</option></select>
+          <select id="mq-dur" onchange="renderMis()"><option value="">Duración</option></select>
+          <select id="mq-proy" onchange="renderMis()"><option value="">Proyección</option></select>
+          <select id="mq-temp" onchange="renderMis()"><option value="">Temporada</option></select>
         </div>
       </div>
       <div class="sel-bar" id="mis-sel-bar" style="display:none">
@@ -1044,11 +1066,32 @@ const DEFAULT_LISTS={
   notas_top:['Bergamota','Limon','Mandarina','Naranja','Pomelo','Pimienta','Cardamomo','Azafran','Lavanda','Menta','Jengibre','Nuez moscada','Canela'],
   notas_corazon:['Rosa','Jazmin','Iris','Ylang Ylang','Geranio','Violeta','Tuberosa','Lirio','Peonia','Orquidea','Oud','Neroli','Azahar'],
   notas_fondo:['Vainilla','Sandalo','Almizcle','Ambar','Vetiver','Cedro','Pachuli','Benjui','Incienso','Mirra','Cuero','Balsamo','Tonka'],
-  usos:['Dia','Noche','Casual','Formal','Especial','Oficina','Deportivo','Romantico']
+  usos:['Dia','Noche','Casual','Formal','Especial','Oficina','Deportivo','Romantico'],
+  duraciones:['Menos de 2h','2-4h','4-6h','6-8h','8-12h','Mas de 12h'],
+  proyecciones:['Muy cercana','Cercana','Moderada','Notable','Intensa','Bestial'],
+  temporadas:['Primavera','Verano','Otoño','Invierno','Todo el año'],
+  fuentes:['Oud Miraj','Fragrantica','Proveedor propio','Otro']
 };
-function loadLists(){const s=localStorage.getItem('aura_lists');return s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_LISTS));}
+function loadLists(){
+  const s=localStorage.getItem('aura_lists');
+  if(!s)return JSON.parse(JSON.stringify(DEFAULT_LISTS));
+  const saved=JSON.parse(s);
+  // Merge: add any new keys from DEFAULT_LISTS that aren't in saved
+  let changed=false;
+  Object.keys(DEFAULT_LISTS).forEach(k=>{
+    if(!saved[k]){saved[k]=JSON.parse(JSON.stringify(DEFAULT_LISTS[k]));changed=true;}
+  });
+  if(changed)localStorage.setItem('aura_lists',JSON.stringify(saved));
+  return saved;
+}
 function saveLists(l){localStorage.setItem('aura_lists',JSON.stringify(l));}
 let LISTS=loadLists();
+// If LISTS was just merged with new defaults, schedule a sync
+if(!localStorage.getItem('aura_lists_v2')){
+  localStorage.setItem('aura_lists_v2','1');
+  // Will be picked up by the next saveToGoogle call
+  setTimeout(()=>markPending&&markPending(),500);
+}
 
 // ═══════════════════════════════════════════════════════════
 //  DB
@@ -1661,6 +1704,25 @@ $$('content').addEventListener('touchend',e=>{
 //  TABLE SORT
 // ═══════════════════════════════════════════════════════════
 const SS={};
+let _srtState={};
+function srtTbl(th){
+  const tbody=th.closest('table').querySelector('tbody');
+  const col=Array.from(th.parentElement.children).indexOf(th);
+  const key=th.closest('table').id||'t'+col;
+  const dir=(_srtState[key+col]==='asc')?'desc':'asc';
+  _srtState[key+col]=dir;
+  th.closest('tr').querySelectorAll('th').forEach(t=>t.textContent=t.textContent.replace(/ [↑↓]/g,''));
+  th.textContent+=dir==='asc'?' ↑':' ↓';
+  const rows=Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a,b)=>{
+    const ta=a.cells[col]?.textContent.trim().replace(/[$,−—]/g,'')||'';
+    const tb2=b.cells[col]?.textContent.trim().replace(/[$,−—]/g,'')||'';
+    const na=parseFloat(ta),nb=parseFloat(tb2);
+    if(!isNaN(na)&&!isNaN(nb))return dir==='asc'?na-nb:nb-na;
+    return dir==='asc'?ta.localeCompare(tb2,undefined,{numeric:true}):tb2.localeCompare(ta,undefined,{numeric:true});
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+}
 function srt(tId,ci){
   const tbl=$$(tId);if(!tbl)return;
   const k=tId+':'+ci;SS[k]=(SS[k]==='asc')?'desc':'asc';const dir=SS[k];
@@ -1821,7 +1883,7 @@ function copyProduct(){
 
 function buildProdForm(p){
   const b=$$('prod-form-body');
-  const TEMP_OPTS=['Todo el anio','Verano','Invierno','Primavera','Otono'];
+  const TEMP_OPTS=(LISTS.temporadas||['Primavera','Verano','Otoño','Invierno','Todo el año']);
   b.innerHTML=`
   <div class="sdiv"><span>Im&#225;genes</span></div>
   <div id="prod-imgs-row" class="img-thumb-row"></div>
@@ -1833,11 +1895,11 @@ function buildProdForm(p){
   <div class="sdiv"><span>Identificaci&#243;n</span></div>
   <div class="f2">
     <div class="fg"><label>Nombre &#225;rabe *</label><input type="text" id="pf-nombre" placeholder="Sheikh Al Layl..."></div>
-    <div class="fg"><label>Perfume principal (si es copia)</label><input type="text" id="pf-principal" placeholder="Nombre del perfume origen..."></div>
+    <div class="fg"><label>Perfume Principal</label><input type="text" id="pf-principal" placeholder="Nombre del perfume origen..."></div>
   </div>
   <div class="f3">
     <div class="fg"><label>Marca &#225;rabe *</label><div id="ci-pf-marca"></div></div>
-    <div class="fg"><label>Fuente</label><select id="pf-fuente"><option>Oud Miraj</option><option>Fragrantica</option><option>Proveedor propio</option><option>Otro</option></select></div>
+    <div class="fg"><label>Fuente</label><select id="pf-fuente"><option value="">-- Fuente --</option>${(LISTS.fuentes||[]).map(f=>`<option>${f}</option>`).join('')}</select></div>
     <div class="fg"><label>Precio ($)</label><input type="number" id="pf-precio" value="950" min="0"></div>
   </div>
   <div class="fg"><label>Concentraci&#243;n</label><div id="ci-pf-conc"></div></div>
@@ -1860,8 +1922,8 @@ function buildProdForm(p){
   <div class="sdiv"><span>Descripci&#243;n</span></div>
   <div class="fg"><label>Descripci&#243;n *</label><textarea id="pf-desc" placeholder="Caracter, ocasi&#243;n..."></textarea></div>
   <div class="f2">
-    <div class="fg"><label>Duraci&#243;n</label><select id="pf-dur"><option value="">--</option><option>2-4 horas</option><option>4-6 horas</option><option>6-8 horas</option><option>8-12 horas</option><option>+12 horas</option></select></div>
-    <div class="fg"><label>Proyecci&#243;n</label><select id="pf-proy"><option value="">--</option><option>Intima</option><option>Moderada</option><option>Buena</option><option>Excelente (deja estela)</option></select></div>
+    <div class="fg"><label>Duraci&#243;n</label><select id="pf-dur"><option value="">-- Duración --</option>${(LISTS.duraciones||[]).map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div class="fg"><label>Proyecci&#243;n</label><select id="pf-proy"><option value="">-- Proyección --</option>${(LISTS.proyecciones||[]).map(pr=>`<option>${pr}</option>`).join('')}</select></div>
   </div>
   <div class="fg"><label>Notas adicionales</label><textarea id="pf-extra" style="min-height:50px"></textarea></div>
   <div class="sdiv"><span>Estado</span></div>
@@ -2044,8 +2106,18 @@ async function deleteCurrentProd(){
 //  CATALOG
 // ═══════════════════════════════════════════════════════════
 let selProds=new Set();
-function renderCatalog(){updateCatFilters();filterCatalog();$$('cat-count').textContent=DB.products.length+' perfumes';}
+function renderCatalog(){
+  updateCatFilters();filterCatalog();
+  $$('cat-count').textContent=DB.products.length+' perfumes';
+  // Also update mis-prod count whenever catalog renders
+  const _mc=$$('mis-count-total');
+  if(_mc)_mc.textContent=DB.products.filter(p=>p.mio&&!p.oculto).length;
+}
 function updateCatFilters(){
+  // Fill fuente filter from LISTS
+  const fuenteSel=$$('fq-fuente');
+  if(fuenteSel)fuenteSel.innerHTML='<option value="">Fuente</option>'
+    +(LISTS.fuentes||[]).map(f=>'<option>'+f+'</option>').join('');
   const ms=$$('fq-marca');
   const mc=[...new Set(DB.products.map(p=>arr(p.marca)[0]||p.marca||''))].filter(Boolean).sort();
   ms.innerHTML='<option value="">Marca &aacute;rabe</option>'+mc.map(m=>`<option>${m}</option>`).join('');
@@ -2058,9 +2130,51 @@ function updateCatFilters(){
   const fu=$$('fq-uso');
   const fuc=[...new Set(DB.products.flatMap(p=>arr(p.uso)))].filter(Boolean).sort();
   fu.innerHTML='<option value="">Uso</option>'+fuc.map(u=>`<option>${u}</option>`).join('');
+  const fillSel=(id,vals,lbl)=>{
+    const el=$$(id);if(!el)return;
+    const uniq=[...new Set(vals)].filter(Boolean).sort();
+    el.innerHTML='<option value="">'+lbl+'</option>'+uniq.map(v=>'<option>'+v+'</option>').join('');
+  };
+  fillSel('fq-top',[...(LISTS.notas_top||[]),...DB.products.flatMap(p=>arr(p.top))],'Nota Salida');
+  fillSel('fq-cor',[...(LISTS.notas_corazon||[]),...DB.products.flatMap(p=>arr(p.cor))],'Nota Corazón');
+  fillSel('fq-fondo',[...(LISTS.notas_fondo||[]),...DB.products.flatMap(p=>arr(p.fondo))],'Nota Fondo');
+  fillSel('fq-conc',[...(LISTS.concentraciones||[]),...DB.products.map(p=>p.concentracion)],'Concentración');
+  fillSel('fq-dur',[...(LISTS.duraciones||[]),...DB.products.map(p=>p.dur)],'Duración');
+  fillSel('fq-proy',[...(LISTS.proyecciones||[]),...DB.products.map(p=>p.proy)],'Proyección');
+  fillSel('fq-temp',[...(LISTS.temporadas||[]),...DB.products.flatMap(p=>arr(p.temporada))],'Temporada');
+  fillSel('mq-top',[...(LISTS.notas_top||[]),...DB.products.flatMap(p=>arr(p.top))],'Nota Salida');
+  fillSel('mq-cor',[...(LISTS.notas_corazon||[]),...DB.products.flatMap(p=>arr(p.cor))],'Nota Corazón');
+  fillSel('mq-fondo',[...(LISTS.notas_fondo||[]),...DB.products.flatMap(p=>arr(p.fondo))],'Nota Fondo');
+  fillSel('mq-conc',[...(LISTS.concentraciones||[]),...DB.products.map(p=>p.concentracion)],'Concentración');
+  fillSel('mq-dur',[...(LISTS.duraciones||[]),...DB.products.map(p=>p.dur)],'Duración');
+  fillSel('mq-proy',[...(LISTS.proyecciones||[]),...DB.products.map(p=>p.proy)],'Proyección');
+  fillSel('mq-temp',[...(LISTS.temporadas||[]),...DB.products.flatMap(p=>arr(p.temporada))],'Temporada');
+  // Row-2 selectors: fill from LISTS + product data
+  const _fillS=(id,vals,lbl)=>{
+    const el=$$(id);if(!el)return;
+    el.innerHTML='<option value="">'+lbl+'</option>'+[...new Set(vals)].filter(Boolean).sort().map(v=>'<option>'+v+'</option>').join('');
+  };
+  _fillS('fq-top',[...(LISTS.notas_top||[]),...DB.products.flatMap(p=>arr(p.top))],'Nota Salida');
+  _fillS('fq-cor',[...(LISTS.notas_corazon||[]),...DB.products.flatMap(p=>arr(p.cor))],'Nota Corazón');
+  _fillS('fq-fondo',[...(LISTS.notas_fondo||[]),...DB.products.flatMap(p=>arr(p.fondo))],'Nota Fondo');
+  _fillS('fq-conc',[...(LISTS.concentraciones||[]),...DB.products.map(p=>p.concentracion)],'Concentración');
+  _fillS('fq-dur',[...(LISTS.duraciones||[]),...DB.products.map(p=>p.dur)],'Duración');
+  _fillS('fq-proy',[...(LISTS.proyecciones||[]),...DB.products.map(p=>p.proy)],'Proyección');
+  _fillS('fq-temp',[...(LISTS.temporadas||[]),...DB.products.flatMap(p=>arr(p.temporada))],'Temporada');
+  _fillS('mq-top',[...(LISTS.notas_top||[]),...DB.products.flatMap(p=>arr(p.top))],'Nota Salida');
+  _fillS('mq-cor',[...(LISTS.notas_corazon||[]),...DB.products.flatMap(p=>arr(p.cor))],'Nota Corazón');
+  _fillS('mq-fondo',[...(LISTS.notas_fondo||[]),...DB.products.flatMap(p=>arr(p.fondo))],'Nota Fondo');
+  _fillS('mq-conc',[...(LISTS.concentraciones||[]),...DB.products.map(p=>p.concentracion)],'Concentración');
+  _fillS('mq-dur',[...(LISTS.duraciones||[]),...DB.products.map(p=>p.dur)],'Duración');
+  _fillS('mq-proy',[...(LISTS.proyecciones||[]),...DB.products.map(p=>p.proy)],'Proyección');
+  _fillS('mq-temp',[...(LISTS.temporadas||[]),...DB.products.flatMap(p=>arr(p.temporada))],'Temporada');
 }
 function filterCatalog(){
-  const q=(cv('q')||'').toLowerCase(),ff=cv('fq-fuente'),fm=cv('fq-marca'),fg=cv('fq-genero'),ffa=cv('fq-familia'),fe=cv('fq-estado'),fi=cv('fq-inspo'),fu=cv('fq-uso');
+  const q=(cv('q')||'').toLowerCase();
+  const ff=cv('fq-fuente'),fm=cv('fq-marca'),fg=cv('fq-genero'),ffa=cv('fq-familia'),fe=cv('fq-estado'),fi=cv('fq-inspo'),fu=cv('fq-uso');
+  const ftop=$$('fq-top')?.value||'',fcor=$$('fq-cor')?.value||'';
+  const ffondo=$$('fq-fondo')?.value||'',fconc=$$('fq-conc')?.value||'';
+  const fdur=$$('fq-dur')?.value||'',fproy=$$('fq-proy')?.value||'',ftemp=$$('fq-temp')?.value||'';
   const list=DB.products.filter(p=>{
     if(ff&&p.fuente!==ff)return false;
     if(fm&&!arr(p.marca).includes(fm))return false;
@@ -2075,9 +2189,26 @@ function filterCatalog(){
     if(fe==='nv'&&!p.no_vendible)return false;
     if(fe==='oculto'&&!p.oculto)return false;
     if(!fe&&p.oculto)return false;
-    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',p.imarca||'',...arr(p.top),...arr(p.cor),...arr(p.fondo)].join(' ').toLowerCase().includes(q))return false;
+    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',p.imarca||'',
+       p.perfume_principal||'',String(p.precio||''),
+       ...arr(p.top),...arr(p.cor),...arr(p.fondo)].join(' ').toLowerCase().includes(q))return false;
+    if(ftop&&!arr(p.top).includes(ftop))return false;
+    if(fcor&&!arr(p.cor).includes(fcor))return false;
+    if(ffondo&&!arr(p.fondo).includes(ffondo))return false;
+    if(fconc&&p.concentracion!==fconc)return false;
+    if(fdur&&p.dur!==fdur)return false;
+    if(fproy&&p.proy!==fproy)return false;
+    if(ftemp&&!arr(p.temporada).includes(ftemp))return false;
     return true;
   });
+  const _sf=$$('cat-sort-field')?.value,_sd=$$('cat-sort-dir')?.value||'asc';
+  if(_sf)list.sort((a,b)=>{
+    const va=_sf==='precio'?(a.precio||0):_sf==='familia'?arr(a.familia).join():_sf==='marca'?(arr(a.marca)[0]||''):(a[_sf]||'');
+    const vb=_sf==='precio'?(b.precio||0):_sf==='familia'?arr(b.familia).join():_sf==='marca'?(arr(b.marca)[0]||''):(b[_sf]||'');
+    if(_sf==='precio')return _sd==='asc'?va-vb:vb-va;
+    return _sd==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+  });
+  $$('cat-count').textContent=list.length+' perfumes';
   renderCards(list,'pgrid');
 }
 function clearCatFilter(){
@@ -2109,6 +2240,9 @@ function renderCards(list,gid){
           ${arr(p.familia).slice(0,1).map(f=>`<span class="tag">${f}</span>`).join('')}
         </div>
         ${p.inombre?`<div class="pcard-inspo" style="margin-top:4px;font-size:10px">&#8776; ${p.imarca} ${p.inombre}</div>`:''}
+        ${arr(p.top).length?`<div style="font-size:9px;color:var(--mist);margin-top:2px">🌿 ${arr(p.top).slice(0,3).join(', ')}</div>`:''}
+        ${arr(p.cor).length?`<div style="font-size:9px;color:var(--mist)">🌸 ${arr(p.cor).slice(0,3).join(', ')}</div>`:''}
+        ${arr(p.fondo).length?`<div style="font-size:9px;color:var(--mist)">🌲 ${arr(p.fondo).slice(0,3).join(', ')}</div>`:''}
       </div>
       <div class="pcard-foot">
         <span class="pcard-price">${fmt$(p.precio)}</span>
@@ -2342,9 +2476,46 @@ async function handleBatchImg(e,id){
 // ═══════════════════════════════════════════════════════════
 //  MIS PRODUCTOS
 // ═══════════════════════════════════════════════════════════
-const MIS_FIELDS={nombre:true,familia:true,uso:true,precio:true,descripcion:false,piramide:false,inspiracion:true};
-const MIS_LABELS={nombre:'Nombre',familia:'Familia',uso:'Uso',precio:'Precio',descripcion:'Descripcion',piramide:'Piramide',inspiracion:'Inspiracion'};
+const MIS_FIELDS={genero:false,marca:false,nombre:true,familia:true,uso:true,precio:true,descripcion:false,piramide:false,inspiracion:true,perfume_principal:false,inspo_completa:false,temporada:false,concentracion:false,duracion:false,proyeccion:false,notas:false};
+const MIS_LABELS={genero:'Género',marca:'Marca árabe',nombre:'Nombre',familia:'Familia',uso:'Uso',precio:'Precio',descripcion:'Descripción',piramide:'Pirámide',inspiracion:'Inspiración',perfume_principal:'Perfume Principal',inspo_completa:'Inspo completa',temporada:'Temporada',concentracion:'Concentración',duracion:'Duración',proyeccion:'Proyección',notas:'Notas olfativas'};
 
+function buildAdminUI(){
+  const c=$$('admin-lists');if(!c)return;
+  const labels={
+    marcas_arabes:'Marcas arabes',marcas_inspiracion:'Marcas inspiracion',
+    familias:'Familias',concentraciones:'Concentraciones',presentaciones:'Presentaciones',
+    notas_top:'Notas salida',notas_corazon:'Notas corazon',notas_fondo:'Notas fondo',
+    usos:'Usos',duraciones:'Duracion',proyecciones:'Proyeccion',
+    temporadas:'Temporadas',fuentes:'Fuentes'
+  };
+  c.innerHTML=Object.keys(labels).map(k=>{
+    const vals=(LISTS[k]||[]);
+    const chips=vals.map(v=>'<span class="tag" style="cursor:pointer" onclick="removeListItem(\''
+      +k+'\',\''+v.replace(/'/g,'\\u0027')+'\')">'+ v+' ×</span>').join('');
+    return '<div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:14px;margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<strong style="font-size:13px">'+labels[k]+'</strong>'
+      +'<div style="display:flex;gap:5px">'
+      +'<input id="li-inp-'+k+'" type="text" placeholder="Agregar..." style="font-size:12px;padding:3px 7px;width:140px" onkeydown="if(event.key===\'Enter\')addListItem(\''+k+'\')">'
+      +'<button class="btn btn-gold btn-sm" onclick="addListItem(\''+k+'\')">+</button>'
+      +'</div></div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px">'+chips+'</div>'
+      +'</div>';
+  }).join('');
+}
+function addListItem(k){
+  const inp=$$('li-inp-'+k);if(!inp)return;
+  const val=inp.value.trim();if(!val)return;
+  if(!LISTS[k])LISTS[k]=[];
+  if(!LISTS[k].includes(val)){LISTS[k].push(val);localStorage.setItem('aura_lists',JSON.stringify(LISTS));markPending();saveToGoogle().catch(()=>{});}
+  inp.value='';buildAdminUI();
+}
+function removeListItem(k,v){
+  if(!LISTS[k])return;
+  LISTS[k]=LISTS[k].filter(x=>x!==v);
+  localStorage.setItem('aura_lists',JSON.stringify(LISTS));
+  markPending();saveToGoogle().catch(()=>{});buildAdminUI();
+}
 function buildMisFieldsUI(){
   const c=$$('mis-fields-checkboxes');if(!c)return;
   c.innerHTML=Object.keys(MIS_FIELDS).map(k=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${MIS_FIELDS[k]?'checked':''} onchange="MIS_FIELDS['${k}']=this.checked;renderMis()" style="accent-color:var(--gold)">${MIS_LABELS[k]}</label>`).join('');
@@ -2382,9 +2553,34 @@ function renderMis(){
     if(fe==='nv'&&!p.no_vendible)return false;
     if(fe==='oculto'&&!p.oculto)return false;
     if(ex==='1'&&getExistenciaForProd(p.id)<=0)return false;
-    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||''].join(' ').toLowerCase().includes(q))return false;
+    const _mtop=$$('mq-top')?.value||'',_mcor=$$('mq-cor')?.value||'';
+    const _mfondo=$$('mq-fondo')?.value||'',_mconc=$$('mq-conc')?.value||'';
+    const _mdur=$$('mq-dur')?.value||'',_mproy=$$('mq-proy')?.value||'',_mtemp=$$('mq-temp')?.value||'';
+    if(_mtop&&!arr(p.top).includes(_mtop))return false;
+    if(_mcor&&!arr(p.cor).includes(_mcor))return false;
+    if(_mfondo&&!arr(p.fondo).includes(_mfondo))return false;
+    if(_mconc&&p.concentracion!==_mconc)return false;
+    if(_mdur&&p.dur!==_mdur)return false;
+    if(_mproy&&p.proy!==_mproy)return false;
+    if(_mtemp&&!arr(p.temporada).includes(_mtemp))return false;
+    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',p.imarca||'',
+       p.perfume_principal||'',String(p.precio||''),
+       ...arr(p.top),...arr(p.cor),...arr(p.fondo)].join(' ').toLowerCase().includes(q))return false;
     return true;
   });
+  // Update count
+  const _misTot=DB.products.filter(p=>p.mio&&!p.oculto).length;
+  const _cntEl=$$('mis-count-total');if(_cntEl)_cntEl.textContent=_misTot;
+  // Sort
+  const _msf=$$('mis-sort-field')?.value,_msd=$$('mis-sort-dir')?.value||'asc';
+  if(_msf){
+    list.sort((a,b)=>{
+      const va=_msf==='precio'?(a.precio||0):_msf==='familia'?arr(a.familia).join():_msf==='marca'?(arr(a.marca)[0]||''):_msf==='imarca'?(a.imarca||''):(a[_msf]||'');
+      const vb=_msf==='precio'?(b.precio||0):_msf==='familia'?arr(b.familia).join():_msf==='marca'?(arr(b.marca)[0]||''):_msf==='imarca'?(b.imarca||''):(b[_msf]||'');
+      if(_msf==='precio')return _msd==='asc'?va-vb:vb-va;
+      return _msd==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    });
+  }
   const g=$$('mis-grid');
   if(!list.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">&#128230;</div><p>Sin productos. Marca perfumes como "Mi negocio".</p></div>';return;}
   updateMisSelBar();
@@ -2403,6 +2599,17 @@ function renderMis(){
         ${MIS_FIELDS.nombre?`<div class="pcard-name">${p.nombre}</div>`:''}
         <div style="font-size:9px;color:var(--mist);text-transform:uppercase">${marca}</div>
         ${MIS_FIELDS.inspiracion&&p.inombre?`<div class="pcard-inspo">&#8776; ${p.imarca} ${p.inombre}</div>`:''}
+        ${MIS_FIELDS.notas&&arr(p.top).length?`<div style="font-size:9px;color:var(--mist)">🌿 ${arr(p.top).join(', ')}</div>`:''}
+        ${MIS_FIELDS.notas&&arr(p.cor).length?`<div style="font-size:9px;color:var(--mist)">🌸 ${arr(p.cor).join(', ')}</div>`:''}
+        ${MIS_FIELDS.notas&&arr(p.fondo).length?`<div style="font-size:9px;color:var(--mist)">🌲 ${arr(p.fondo).join(', ')}</div>`:''}
+        ${MIS_FIELDS.temporada&&arr(p.temporada).length?`<div style="font-size:9px;color:var(--mist)">☀️ ${arr(p.temporada).join(', ')}</div>`:''}
+        ${MIS_FIELDS.concentracion&&p.concentracion?`<div style="font-size:9px;color:var(--gold)">${p.concentracion}</div>`:''}
+        ${MIS_FIELDS.duracion&&p.dur?`<div style="font-size:9px;color:var(--mist)">⏱ ${p.dur}</div>`:''}
+        ${MIS_FIELDS.proyeccion&&p.proy?`<div style="font-size:9px;color:var(--mist)">💨 ${p.proy}</div>`:''}
+        ${MIS_FIELDS.perfume_principal&&p.perfume_principal?`<div style="font-size:9px;color:var(--mist)">PP: ${p.perfume_principal}</div>`:''}
+        ${MIS_FIELDS.inspo_completa&&p.imarca?`<div style="font-size:9px;color:var(--mist)">🔎 ${p.imarca} ${p.inombre||''}</div>`:''}
+        ${MIS_FIELDS.genero&&p.genero?`<span class="tag" style="font-size:9px">${p.genero}</span>`:''}
+        ${MIS_FIELDS.marca?`<span class="tag" style="font-size:9px">${arr(p.marca)[0]||p.marca||''}</span>`:''}
         <div class="pcard-tags">${p.concentracion?`<span class="tag" style="color:var(--gold);border-color:rgba(201,146,42,.35);font-weight:500">${p.concentracion}</span>`:''}${MIS_FIELDS.familia?arr(p.familia).map(f=>`<span class="tag">${f}</span>`).join(''):''}${MIS_FIELDS.uso?arr(p.uso).map(u=>`<span class="tag">${u}</span>`).join(''):''}</div>
         ${MIS_FIELDS.descripcion&&p.desc?`<div style="font-size:11px;color:var(--mist);margin-top:4px;line-height:1.4">${p.desc.slice(0,80)}...</div>`:''}
         ${MIS_FIELDS.piramide&&arr(p.top).length?`<div style="font-size:10px;color:var(--mist);margin-top:3px">Salida: ${arr(p.top).join(', ')}</div>`:''}
@@ -2438,37 +2645,121 @@ function clearMisFilter(){
 
 function exportMisPDF(){
   if(!window.jspdf){toastMsg('Libreria PDF no disponible','err');return;}
-  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'p',unit:'mm',format:'a4'});
-  const q=(cv('mq')||'').toLowerCase(),fg=cv('mq-genero'),ffa=cv('mq-familia'),ex=cv('mq-exist');
+  const {jsPDF}=window.jspdf;
+  const q=(cv('mq')||'').toLowerCase();
+  const fm=cv('mq-marca'),fg=cv('mq-genero'),ffa=cv('mq-familia'),ex=cv('mq-exist');
   const list=DB.products.filter(p=>{
     if(!p.mio||p.oculto)return false;
-    if(fg&&p.genero!==fg)return false;if(ffa&&!arr(p.familia).includes(ffa))return false;
+    if(fm&&!arr(p.marca).includes(fm))return false;
+    if(fg&&p.genero!==fg)return false;
+    if(ffa&&!arr(p.familia).includes(ffa))return false;
     if(ex==='1'&&getExistenciaForProd(p.id)<=0)return false;
-    if(q&&![p.nombre,arr(p.marca).join(' ')].join(' ').toLowerCase().includes(q))return false;
+    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||''].join(' ').toLowerCase().includes(q))return false;
     return true;
   });
-  doc.setFontSize(20);doc.text('Aura de Oriente',14,18);
-  doc.setFontSize(11);doc.setTextColor(120);doc.text('Catalogo de Perfumes Arabes',14,25);
-  doc.setTextColor(0);let y=35;
-  list.forEach((p,i)=>{
-    if(y>265){doc.addPage();y=20;}
-    doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text((i+1)+'. '+p.nombre,14,y);y+=5;
-    doc.setFont(undefined,'normal');doc.setFontSize(10);doc.setTextColor(100);
-    doc.text((arr(p.marca)[0]||'')+' | '+p.genero+(p.concentracion?' | '+p.concentracion:''),14,y);y+=5;
-    if(p.inombre){doc.text('Inspirado en: '+p.imarca+' '+p.inombre,14,y);y+=4;}
-    doc.setTextColor(0);
-    if(p.familia&&arr(p.familia).length){doc.text('Familia: '+arr(p.familia).join(', '),14,y);y+=4;}
-    if(p.uso&&arr(p.uso).length){doc.text('Uso: '+arr(p.uso).join(', '),14,y);y+=4;}
-    if(arr(p.top).length||arr(p.cor).length||arr(p.fondo).length){
-      const pir=['Salida: '+arr(p.top).join(', '),'Corazon: '+arr(p.cor).join(', '),'Fondo: '+arr(p.fondo).join(', ')].filter(s=>s.length>8);
-      pir.forEach(s=>{doc.text(s,14,y);y+=4;});
+  if(!list.length){toastMsg('No hay productos para exportar','err');return;}
+  toastMsg('Generando PDF...','ok');
+  const doc=new jsPDF({orientation:'p',unit:'mm',format:'a4'});
+  const W=210,H=297;
+  const GOLD=[201,146,42],INK=[14,11,7],MIST=[130,120,108],SURF=[253,250,246];
+  list.forEach((p,pi)=>{
+    if(pi>0)doc.addPage();
+    const marca=arr(p.marca)[0]||p.marca||'';
+    doc.setFillColor(...SURF);doc.rect(0,0,W,H,'F');
+    // Top bar
+    doc.setFillColor(...GOLD);doc.rect(0,0,W,16,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7.5);doc.setFont(undefined,'normal');
+    doc.text('AURA DE ORIENTE  ●  Catálogo de Perfumes Árabes',W/2,10,{align:'center'});
+    doc.setFontSize(7);doc.text((pi+1)+'/'+list.length,W-8,10,{align:'right'});
+    // Image block left
+    const imgX=10,imgY=22,imgW=75,imgH=95;
+    doc.setFillColor(242,237,230);doc.roundedRect(imgX,imgY,imgW,imgH,3,3,'F');
+    const imgSrc=getProdMainImgUrl(p);
+    if(imgSrc){try{doc.addImage(imgSrc,'JPEG',imgX,imgY,imgW,imgH,undefined,'FAST');}catch(e){}}
+    // Thumbs
+    const extras=(p.imgs||[]).filter(img=>img.url&&img.url!==imgSrc).slice(0,3);
+    if(extras.length){
+      const tw2=Math.floor((imgW-2*(extras.length-1))/extras.length);
+      extras.forEach((img,ei)=>{
+        const ex2=imgX+ei*(tw2+2),ey=imgY+imgH+3;
+        doc.setFillColor(235,229,221);doc.roundedRect(ex2,ey,tw2,25,2,2,'F');
+        try{doc.addImage(img.url,'JPEG',ex2,ey,tw2,25,undefined,'FAST');}catch(e){}
+      });
     }
-    if(p.desc){const lines=doc.splitTextToSize(p.desc,182);doc.text(lines,14,y);y+=lines.length*4;}
-    doc.setFontSize(12);doc.setFont(undefined,'bold');doc.text('Precio: '+fmt$(p.precio),14,y);doc.setFont(undefined,'normal');
-    y+=7;doc.setDrawColor(220,200,170);doc.line(14,y-3,196,y-3);y+=2;
+    // Right column
+    let cy=26;const cx=92,cw=W-cx-8;
+    // Product name
+    doc.setTextColor(...INK);doc.setFont(undefined,'bold');doc.setFontSize(17);
+    const nomL=doc.splitTextToSize(p.nombre,cw);
+    doc.text(nomL,cx,cy);cy+=nomL.length*6.5+1;
+    // Marca / conc / genero
+    doc.setFont(undefined,'normal');doc.setFontSize(9.5);doc.setTextColor(...MIST);
+    const sub=[marca,p.concentracion,p.genero].filter(Boolean).join(' · ');
+    doc.text(sub,cx,cy);cy+=5.5;
+    // Inspiracion
+    if(MIS_FIELDS.inspiracion&&p.inombre){
+      doc.setFontSize(9);doc.setTextColor(160,120,50);
+      doc.text('≈ '+p.imarca+' '+p.inombre,cx,cy);cy+=5;
+    }
+    // Divider
+    doc.setDrawColor(...GOLD);doc.setLineWidth(0.3);doc.line(cx,cy,W-8,cy);cy+=4;
+    // Descripcion
+    if(MIS_FIELDS.descripcion&&p.desc){
+      doc.setFontSize(8.5);doc.setTextColor(...INK);
+      const dl=doc.splitTextToSize(p.desc,cw);
+      const maxL=Math.min(dl.length,5);
+      doc.text(dl.slice(0,maxL),cx,cy);cy+=maxL*4+3;
+    }
+    // Piramide
+    if(arr(p.top).length||arr(p.cor).length||arr(p.fondo).length){
+      doc.setFontSize(7.5);doc.setFont(undefined,'bold');doc.setTextColor(...GOLD);
+      doc.text('PIRAMIDE OLFATIVA',cx,cy);cy+=3.8;
+      doc.setFont(undefined,'normal');doc.setTextColor(...INK);
+      if(arr(p.top).length){const t=doc.splitTextToSize('☕ Salida: '+arr(p.top).join(', '),cw);doc.text(t,cx,cy);cy+=t.length*3.8;}
+      if(arr(p.cor).length){const t=doc.splitTextToSize('✿ Corazon: '+arr(p.cor).join(', '),cw);doc.text(t,cx,cy);cy+=t.length*3.8;}
+      if(arr(p.fondo).length){const t=doc.splitTextToSize('◆ Fondo: '+arr(p.fondo).join(', '),cw);doc.text(t,cx,cy);cy+=t.length*3.8;}
+      cy+=2;
+    }
+    // Familia + uso tags
+    const tagVals=[];
+    if(MIS_FIELDS.familia)tagVals.push(...arr(p.familia).slice(0,3));
+    if(MIS_FIELDS.uso)tagVals.push(...arr(p.uso).slice(0,2));
+    if(MIS_FIELDS.temporada)tagVals.push(...arr(p.temporada).slice(0,2));
+    if(tagVals.length){
+      let tx2=cx;
+      doc.setFontSize(7.5);
+      tagVals.slice(0,7).forEach(t=>{
+        const tw2=doc.getTextWidth(t)+5;
+        doc.setFillColor(230,215,190);doc.roundedRect(tx2,cy-3,tw2,4.5,1,1,'F');
+        doc.setTextColor(...INK);doc.text(t,tx2+2.5,cy);
+        tx2+=tw2+2;
+      });
+      cy+=7;
+    }
+    // Extra attrs
+    const xtra=[];
+    if(MIS_FIELDS.duracion&&p.dur)xtra.push('⏱ '+p.dur);
+    if(MIS_FIELDS.proyeccion&&p.proy)xtra.push('◈ '+p.proy);
+    if(xtra.length){doc.setFontSize(8);doc.setTextColor(...MIST);doc.text(xtra.join('  ·  '),cx,cy);cy+=5;}
+    if(MIS_FIELDS.perfume_principal&&p.perfume_principal){
+      doc.setFontSize(8);doc.setTextColor(...MIST);
+      doc.text('Perf. Principal: '+p.perfume_principal,cx,cy);cy+=5;
+    }
+    // Price block at bottom
+    const prY=Math.max(cy+6,imgY+imgH-8);
+    doc.setFontSize(20);doc.setFont(undefined,'bold');doc.setTextColor(...GOLD);
+    doc.text(fmt$(p.precio),cx,prY);
+    doc.setFontSize(7.5);doc.setFont(undefined,'normal');doc.setTextColor(...MIST);
+    doc.text('precio de venta',cx,prY+5);
+    // Bottom bar
+    doc.setFillColor(...GOLD);doc.rect(0,H-8,W,8,'F');
+    doc.setFontSize(6.5);doc.setTextColor(255,255,255);
+    doc.text('Aura de Oriente  ●  '+new Date().toLocaleDateString('es-MX'),W/2,H-3,{align:'center'});
   });
-  doc.save('aura_mis_productos.pdf');toastMsg('PDF generado','ok');
+  doc.save('aura_catalogo_'+new Date().toISOString().slice(0,10)+'.pdf');
+  toastMsg('PDF generado ('+list.length+' producto(s))','ok');
 }
+
 
 // ═══════════════════════════════════════════════════════════
 //  ALERTS
@@ -2543,6 +2834,10 @@ const ADMIN_KEYS=[
   {key:'notas_corazon',label:'Notas de coraz&#243;n'},
   {key:'notas_fondo',label:'Notas de fondo'},
   {key:'usos',label:'Usos sugeridos'},
+  {key:'duraciones',label:'Duración'},
+  {key:'proyecciones',label:'Proyección'},
+  {key:'temporadas',label:'Temporadas'},
+  {key:'fuentes',label:'Fuente'},
 ];
 function renderAdmin(){
   $$('admin-lists').innerHTML=ADMIN_KEYS.map(({key,label})=>`
@@ -4168,10 +4463,22 @@ function renderReporte(){
       +'<div style="overflow-x:auto"><table><thead><tr><th>Proveedor</th><th style="text-align:right">Total comprado</th><th style="text-align:right">Pagado</th><th style="text-align:right">Adeudado</th></tr></thead>'
       +'<tbody>'+_provResumen+'</tbody></table></div></div>';
     thead.innerHTML='<tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Tipo</th><th>Motivo</th></tr>';
-    tbody.innerHTML=list.map(p=>`<tr>
-      <td>${fmtDate(p.fecha)}</td><td>${p.nombre}</td><td style="color:var(--ok)">${fmt$(p.monto)}</td>
-      <td><span class="tag">${p.tipo}</span></td><td style="font-size:11px;color:var(--mist)">${p.motivo||''}</td>
-    </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>Sin datos</p></div></td></tr>';
+    // Last 10: combine received purchases + historial_prov abonos, sorted desc
+    const _rcv=(DB.purchases||[]).filter(c=>c.estado==='recibido'&&(!provId||c.provId===provId))
+      .map(c=>({fecha:c.fechaRec||c.fecha,nombre:c.proveedor||'',monto:c.total,tipo:'compra_recibida',motivo:c.producto+' x'+(c.udsRecibidas||c.uds)}));
+    const _abn=DB.providers.filter(pv=>!provId||pv.id===provId)
+      .flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono').map(h=>({fecha:h.fecha,nombre:pv.nombre,monto:h.monto,tipo:'abono',motivo:h.motivo||''})));
+    const _all10=[..._rcv,..._abn]
+      .filter(r=>(!desde||dateToISO(r.fecha)>=desde)&&(!hasta||dateToISO(r.fecha)<=hasta))
+      .sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||'')).slice(0,10);
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Detalle</th></tr>';
+    tbody.innerHTML=_all10.map(r=>`<tr>
+      <td style="font-size:11px">${fmtDate(r.fecha)}</td>
+      <td style="font-weight:500">${r.nombre||'&mdash;'}</td>
+      <td><span class="tag">${r.tipo}</span></td>
+      <td style="text-align:right;color:${r.tipo==='abono'?'var(--ok)':'var(--err)'}">${r.tipo==='abono'?'-':'+'} ${fmt$(Math.abs(r.monto||0))}</td>
+      <td style="font-size:11px;color:var(--mist)">${r.motivo}</td>
+    </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>Sin movimientos</p></div></td></tr>';
   }
   else if(curReporte==='ventas'){
     let list=DB.sales.filter(v=>{
@@ -4186,7 +4493,8 @@ function renderReporte(){
       <div class="sc"><div class="sc-l">Total vendido</div><div class="sc-v" style="font-size:14px">${fmt$(totV)}</div></div>
       <div class="sc sc-ok"><div class="sc-l">Cobrado</div><div class="sc-v" style="font-size:14px">${fmt$(cobV)}</div></div>
       <div class="sc sc-err"><div class="sc-l">Saldo</div><div class="sc-v" style="font-size:14px">${fmt$(totV-cobV)}</div></div>`;
-    thead.innerHTML='<tr><th>Fecha</th><th>Cliente</th><th>Producto</th><th>Uds</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Estado</th><th>Obs.</th></tr>';
+    list=[...list].sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||''));
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Uds</th><th onclick="srtTbl(this)" style="cursor:pointer">Total</th><th onclick="srtTbl(this)" style="cursor:pointer">Cobrado</th><th onclick="srtTbl(this)" style="cursor:pointer">Saldo</th><th onclick="srtTbl(this)" style="cursor:pointer">Estado</th><th onclick="srtTbl(this)" style="cursor:pointer">Obs.</th></tr>';
     tbody.innerHTML=list.map(v=>{const p=v.total-v.pagado;return `<tr>
       <td>${fmtDate(v.fecha)}</td><td>${v.cliente}</td><td>${v.producto}</td><td>${v.uds}</td>
       <td>${fmt$(v.total)}</td><td style="color:var(--ok)">${fmt$(v.pagado)}</td>
@@ -4220,11 +4528,13 @@ function renderReporte(){
       +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Resumen por cliente</div>'
       +'<div style="overflow-x:auto"><table><thead><tr><th>Cliente</th><th style="text-align:right">Total comprado</th><th style="text-align:right">Cobrado</th><th style="text-align:right">Adeudado</th></tr></thead>'
       +'<tbody>'+_cliResumen+'</tbody></table></div></div>';
-    thead.innerHTML='<tr><th>Fecha</th><th>Cliente</th><th>Producto</th><th>Monto</th></tr>';
+    allPagos.sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||''));
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Tipo</th></tr>';
     tbody.innerHTML=allPagos.map(p=>`<tr>
-      <td>${fmtDate(p.fecha)}</td><td>${p.cliente}</td><td style="font-size:11px">${p.producto}</td>
-      <td style="color:var(--ok);font-weight:500">${fmt$(p.monto)}</td>
-    </tr>`).join('')||'<tr><td colspan="4"><div class="empty"><p>Sin datos</p></div></td></tr>';
+      <td style="font-size:11px">${fmtDate(p.fecha)}</td><td>${p.cliente}</td><td style="font-size:11px">${p.producto}</td>
+      <td style="text-align:right;color:var(--ok);font-weight:500">${fmt$(p.monto)}</td>
+      <td><span class="tag">${p.tipo||'real'}</span></td>
+    </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>Sin datos</p></div></td></tr>';
   }
   else if(curReporte==='inventario'){
     let list=DB.inventory.filter(i=>{if(stockFilt==='consig'&&!i.consig)return false;if(stockFilt==='propio'&&i.consig)return false;return true;});
@@ -4233,10 +4543,10 @@ function renderReporte(){
       <div class="sc"><div class="sc-l">Existencia total</div><div class="sc-v">${tot}</div></div>
       <div class="sc"><div class="sc-l">Valor costo</div><div class="sc-v" style="font-size:14px">${fmt$(vc)}</div></div>
       <div class="sc sc-ok"><div class="sc-l">Valor venta</div><div class="sc-v" style="font-size:14px">${fmt$(vv)}</div></div>`;
-    thead.innerHTML='<tr><th>Producto</th><th>Marca</th><th>Tipo</th><th>Pres.</th><th>Stock</th><th>Consig</th><th>Existencia</th><th>Costo u.</th><th>P.Venta</th><th>Margen</th></tr>';
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Marca</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer">Stock</th><th onclick="srtTbl(this)" style="cursor:pointer">Consig.</th><th onclick="srtTbl(this)" style="cursor:pointer">Comprom.</th><th onclick="srtTbl(this)" style="cursor:pointer">Existencia</th><th onclick="srtTbl(this)" style="cursor:pointer">Costo u.</th><th onclick="srtTbl(this)" style="cursor:pointer">P.Venta</th><th onclick="srtTbl(this)" style="cursor:pointer">Margen</th></tr>';
     tbody.innerHTML=list.map(i=>{const ex=getExistencia(i);const m=i.precio>0?Math.round((i.precio-i.costo)/i.precio*100):0;return `<tr>
       <td>${i.nombre}</td><td style="font-size:11px">${i.marca}</td><td>${i.tipo}</td><td>${i.pres}</td>
-      <td>${i.stock}</td><td>${i.cuds||0}</td>
+      <td>${i.stock}</td><td>${i.consig?(i.cuds||0):'&mdash;'}</td><td>${i.comprometidas||0}</td>
       <td style="color:${ex<=0?'var(--err)':ex<=2?'var(--warn)':'var(--ok)'};font-weight:500">${ex}</td>
       <td>${fmt$(i.costo)}</td><td>${fmt$(i.precio)}</td><td style="color:${m>=40?'var(--ok)':m>=20?'var(--warn)':'var(--err)'}">${m}%</td>
     </tr>`;}).join('')||'<tr><td colspan="10"><div class="empty"><p>Sin datos</p></div></td></tr>';
@@ -4359,8 +4669,9 @@ function renderProyeccionCobranza(stats,thead,tbody,extra){
     semanas.push({iniISO,finISO,monto,cobros:pagosEnSemana.length,lunes});
   }
 
-  const _maxBar=Math.max(...semanas.map(x=>x.monto),1);
-  const _wVencido=Math.min(totalVencido/_maxBar,1);
+  const _montoVencido=vencidos.reduce((a,v)=>a+Math.min(v.quinc||200,v.total-v.pagado),0);
+  const _maxBar=Math.max(...semanas.map(x=>x.monto),_montoVencido,1);
+  const _wVencido=Math.min(_montoVencido/_maxBar,1);
 
   extra.innerHTML=`<div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:12px;margin-bottom:12px">
     <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Proyecci\u00f3n semanal (8 semanas — por lunes)</div>
@@ -4370,7 +4681,7 @@ function renderProyeccionCobranza(stats,thead,tbody,extra){
       <div style="flex:1;background:var(--surf3);border-radius:4px;height:16px;overflow:hidden">
         <div style="background:var(--err);height:100%;width:${Math.round(_wVencido*100)}%;opacity:.6"></div>
       </div>
-      <span style="font-size:11px;font-weight:700;color:var(--err);min-width:70px;text-align:right">${fmt$(totalVencido)}</span>
+      <span style="font-size:11px;font-weight:700;color:var(--err);min-width:70px;text-align:right">${fmt$(_montoVencido)}</span>
       <span style="font-size:10px;color:var(--mist);min-width:40px">${vencidos.length} cta(s)</span>
     </div>
     ${semanas.map(s=>{
