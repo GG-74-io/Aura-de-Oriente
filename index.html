@@ -263,7 +263,7 @@ tbody tr:hover td{background:var(--surf2)}
       </div>
       <div class="fbar">
         <div class="fbar-r">
-          <input id="q" type="text" placeholder="Buscar nombre, marca, notas..." oninput="filterCatalog()">
+          <input id="q" type="text" placeholder="Buscar nombre, marca, notas, descripción..." oninput="filterCatalog()">
           <select id="fq-fuente" onchange="filterCatalog()"><option value="">Fuente</option></select>
           <select id="fq-marca" onchange="filterCatalog()"><option value="">Marca &aacute;rabe</option></select>
           <select id="fq-genero" onchange="filterCatalog()"><option value="">G&eacute;nero</option><option>Mujer</option><option>Hombre</option><option>Unisex</option></select>
@@ -564,7 +564,7 @@ tbody tr:hover td{background:var(--surf2)}
 
     <!-- ═══ ADMINISTRACIÓN ═══ -->
     <div id="s-admin" class="sec">
-      <div class="sh"><div class="sh-l"><h2>Administraci&oacute;n</h2><p>Gestiona las listas desplegables</p></div></div>
+      <div class="sh"><div class="sh-l"><h2>Administraci&oacute;n</h2><p>Gestiona las listas desplegables</p></div><div class="sh-a"><button class="btn btn-outline btn-sm" onclick="recargarListas()" id="btn-reload-lists">↻ Recargar listas</button></div></div>
       <div id="admin-lists"></div>
     </div>
 
@@ -1437,7 +1437,12 @@ function normalizeProduct(p){
     img_url:fixDriveUrl(p.img_url,p.img_id),
     imgs:fixedImgs,
     img_main_id:p.img_main_id||p.img_id||null,
-    concentracion:p.concentracion||''
+    concentracion:p.concentracion||'',
+    intensidad:p.intensidad||'',
+    extra:p.extra||'',
+    dur:p.dur||'',
+    proy:p.proy||'',
+    perfume_principal:p.perfume_principal||''
   };
 }
 function normalizeInv(i){
@@ -1541,7 +1546,7 @@ function buildExportData(){
       precio:p.precio||0,genero:p.genero||'',concentracion:p.concentracion||'',
       familia:arr(p.familia).join('|'),uso:arr(p.uso).join('|'),temporada:arr(p.temporada).join('|'),
       top:arr(p.top).join('|'),cor:arr(p.cor).join('|'),fondo:arr(p.fondo).join('|'),
-      desc:p.desc||'',dur:p.dur||'',proy:p.proy||'',extra:p.extra||'',
+      desc:p.desc||'',dur:p.dur||'',proy:p.proy||'',intensidad:p.intensidad||'',extra:p.extra||'',
       perfume_principal:p.perfume_principal||'',imarca:p.imarca||'',inombre:p.inombre||'',
       mio:p.mio?'TRUE':'FALSE',fav:p.fav?'TRUE':'FALSE',pros:p.pros?'TRUE':'FALSE',
       verificado:p.verificado?'TRUE':'FALSE',no_vendible:p.no_vendible?'TRUE':'FALSE',oculto:p.oculto?'TRUE':'FALSE',
@@ -1971,6 +1976,7 @@ function buildProdForm(p){
     sv('pf-desc',p.desc||'');
     if(p.dur&&$$('pf-dur'))$$('pf-dur').value=p.dur;
     if(p.proy&&$$('pf-proy'))$$('pf-proy').value=p.proy;
+    if(p.intensidad&&$$('pf-intens'))$$('pf-intens').value=p.intensidad;
     sv('pf-extra',p.extra||'');
     ['mio','fav','pros','ver','nv','oc'].forEach(f=>{
       const el=$$('pf-'+f);if(!el)return;
@@ -2208,9 +2214,6 @@ function filterCatalog(){
     if(fe==='nv'&&!p.no_vendible)return false;
     if(fe==='oculto'&&!p.oculto)return false;
     if(!fe&&p.oculto)return false;
-    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',p.imarca||'',
-       p.perfume_principal||'',String(p.precio||''),
-       ...arr(p.top),...arr(p.cor),...arr(p.fondo)].join(' ').toLowerCase().includes(q))return false;
     if(ftop&&!arr(p.top).includes(ftop))return false;
     if(fcor&&!arr(p.cor).includes(fcor))return false;
     if(ffondo&&!arr(p.fondo).includes(ffondo))return false;
@@ -2237,7 +2240,11 @@ function filterCatalog(){
   renderCards(list,'pgrid');
 }
 function clearCatFilter(){
-  sv('q','');['fq-fuente','fq-marca','fq-genero','fq-familia','fq-estado','fq-inspo','fq-uso'].forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});
+  sv('q','');
+  ['fq-fuente','fq-marca','fq-genero','fq-familia','fq-estado','fq-inspo','fq-uso',
+   'fq-top','fq-cor','fq-fondo','fq-conc','fq-dur','fq-proy','fq-intens','fq-temp',
+   'cat-sort-field']
+  .forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});
   filterCatalog();
 }
 
@@ -2263,6 +2270,7 @@ function renderCards(list,gid){
           ${p.concentracion?`<span class="tag" style="color:var(--gold);border-color:rgba(201,146,42,.35);font-weight:500">${p.concentracion}</span>`:''}
           <span class="tag">${p.genero}</span>
           ${arr(p.familia).slice(0,1).map(f=>`<span class="tag">${f}</span>`).join('')}
+          ${p.intensidad?`<span class="tag" style="color:var(--teal);border-color:rgba(42,95,95,.3);font-size:10px">${p.intensidad}</span>`:''}
         </div>
         ${p.inombre?`<div class="pcard-inspo" style="margin-top:4px;font-size:10px">&#8776; ${p.imarca} ${p.inombre}</div>`:''}
         ${arr(p.top).length?`<div style="font-size:9px;color:var(--mist);margin-top:2px">🌿 ${arr(p.top).slice(0,3).join(', ')}</div>`:''}
@@ -2336,7 +2344,8 @@ function openDetail(id){
       ${arr(p.fondo).length?`<div class="pir-row"><span class="pr-k">Fondo:</span><span>${arr(p.fondo).join(', ')}</span></div>`:''}
     </div>`:''}
     ${p.temporada&&arr(p.temporada).length?`<div style="font-size:12px;color:var(--mist);margin-bottom:5px">Temporada: ${arr(p.temporada).join(', ')}</div>`:''}
-    <div style="font-size:12px;color:var(--mist)">${[p.dur?'Duraci&#243;n: '+p.dur:'',p.proy?'Proyecci&#243;n: '+p.proy:''].filter(Boolean).join(' &#183; ')}</div>
+    <div style="font-size:12px;color:var(--mist)">${[p.dur?'Duraci&#243;n: '+p.dur:'',p.proy?'Proyecci&#243;n: '+p.proy:'',p.intensidad?'Intensidad: '+p.intensidad:''].filter(Boolean).join(' &#183; ')}</div>
+    ${p.extra?`<div style="font-size:12px;color:var(--mist);margin-top:6px;padding:7px 10px;background:var(--surf2);border-radius:var(--rs)">${p.extra}</div>`:''}
     <div style="border-top:.5px solid var(--bord);padding-top:9px;margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">
       <button class="sbtn s-wa" onclick="shareDetailWA()">WhatsApp</button>
       <button class="btn btn-outline btn-sm" onclick="shareDetailIG()">Instagram</button>
@@ -2391,6 +2400,7 @@ function openCompare(){
     {key:'fondo',label:'Notas fondo',get:p=>arr(p.fondo).join(', ')||'—'},
     {key:'dur',label:'Duraci&#243;n',get:p=>p.dur||'—'},
     {key:'proy',label:'Proyecci&#243;n',get:p=>p.proy||'—'},
+    {key:'intensidad',label:'Intensidad',get:p=>p.intensidad||'—'},
     {key:'precio',label:'Precio',get:p=>fmt$(p.precio)},
     {key:'uso',label:'Uso',get:p=>arr(p.uso).join(', ')||'—'},
     {key:'temporada',label:'Temporada',get:p=>arr(p.temporada).join(', ')||'—'},
@@ -2504,6 +2514,29 @@ async function handleBatchImg(e,id){
 const MIS_FIELDS={genero:false,marca:false,nombre:true,familia:true,uso:true,precio:true,descripcion:false,inspiracion:true,perfume_principal:false,temporada:false,concentracion:false,duracion:false,proyeccion:false,intensidad:false,notas:false};
 const MIS_LABELS={genero:'Género',marca:'Marca árabe',nombre:'Nombre',familia:'Familia',uso:'Uso',precio:'Precio',descripcion:'Descripción',inspiracion:'Inspiración',perfume_principal:'Perfume Principal',temporada:'Temporada',concentracion:'Concentración',duracion:'Duración',proyeccion:'Proyección',intensidad:'Intensidad',notas:'Notas olfativas'};
 
+async function recargarListas(){
+  if(!SCRIPT_URL){toastMsg('Configura la URL del script primero','err');return;}
+  const btn=$$('btn-reload-lists');
+  if(btn){btn.disabled=true;btn.textContent='Cargando…';}
+  try{
+    const resp=await gFetch(null,{action:'load_listas'});
+    if(resp&&resp.listas_columnar&&Object.keys(resp.listas_columnar).length){
+      Object.keys(resp.listas_columnar).forEach(k=>{
+        if(resp.listas_columnar[k].length)LISTS[k]=resp.listas_columnar[k];
+      });
+    }else if(resp&&resp.listas&&resp.listas.length){
+      resp.listas.forEach(l=>{if(l.key&&l.valores)LISTS[l.key]=arr(l.valores);});
+    }
+    localStorage.setItem('aura_lists',JSON.stringify(LISTS));
+    updateCatFilters();
+    buildAdminUI();
+    toastMsg('Listas actualizadas desde Google Sheets','ok');
+  }catch(e){
+    toastMsg('Error recargando listas: '+e.message,'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Recargar listas';}
+  }
+}
 function buildAdminUI(){
   const c=$$('admin-lists');if(!c)return;
   const labels={
@@ -2669,7 +2702,11 @@ function clearMisSelection(){
   renderMis();
 }
 function clearMisFilter(){
-  sv('mq','');['mq-marca','mq-genero','mq-familia','mq-inspo','mq-uso','mq-estado','mq-exist'].forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});
+  sv('mq','');
+  ['mq-marca','mq-genero','mq-familia','mq-inspo','mq-uso','mq-estado','mq-exist',
+   'mq-top','mq-cor','mq-fondo','mq-conc','mq-dur','mq-proy','mq-intens','mq-temp',
+   'mis-sort-field']
+  .forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});
   renderMis();
 }
 
@@ -4705,15 +4742,17 @@ function renderReporte(){
 
   if(curReporte==='compras'){
     let list=DB.purchases.filter(c=>{
-      if(desde&&c.fecha<desde)return false;if(hasta&&c.fecha>hasta)return false;
+      if(desde&&(dateToISO(c.fecha)||c.fecha)<desde)return false;
+      if(hasta&&(dateToISO(c.fecha)||c.fecha)>hasta)return false;
       if(provId&&c.provId!==provId)return false;return true;
     });
+    list=[...list].sort((a,b)=>(dateToISO(b.fecha)||b.fecha||'').localeCompare(dateToISO(a.fecha)||a.fecha||''));
     const totP=list.reduce((a,c)=>a+c.total,0);const rec=list.filter(c=>c.estado==='recibido').length;
     stats.innerHTML=`<div class="sc"><div class="sc-l">Pedidos</div><div class="sc-v">${list.length}</div></div>
       <div class="sc sc-ok"><div class="sc-l">Recibidos</div><div class="sc-v">${rec}</div></div>
       <div class="sc sc-err"><div class="sc-l">Pendientes</div><div class="sc-v">${list.length-rec}</div></div>
       <div class="sc"><div class="sc-l">Monto total</div><div class="sc-v" style="font-size:14px">${fmt$(totP)}</div></div>`;
-    thead.innerHTML='<tr><th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Tipo</th><th>Pres.</th><th>Uds</th><th>Costo u.</th><th>Total</th><th>Estado</th></tr>';
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Uds</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Costo u.</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Total</th><th onclick="srtTbl(this)" style="cursor:pointer">Estado</th></tr>';
     tbody.innerHTML=list.map(c=>`<tr>
       <td>${fmtDate(c.fecha)}</td><td>${c.proveedor}</td><td>${c.producto}</td>
       <td>${c.tipo}</td><td>${c.pres}</td><td>${c.uds}</td><td>${fmt$(c.costo)}</td><td>${fmt$(c.total)}</td>
