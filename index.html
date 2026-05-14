@@ -3770,21 +3770,24 @@ async function confirmarRecepcion(id){
   // STEP 1: Calculate real amounts FIRST before any inventory/provider operations
   const costoUnit=c.uds>0?c.total/c.uds:0;
   const montoReal=Math.round(costoUnit*udsRec*100)/100;
-  const hayAjuste=udsRec!==c.uds;
+  const udsPedidas_orig=c.uds;  // capture original BEFORE step 2 updates it
+  const hayAjuste=udsRec!==udsPedidas_orig;
 
   // STEP 2: Update purchase record
   c.estado='recibido';
   c.fechaRec=normalizeDate(fecha);
   c.udsRecibidas=udsRec;
+  c.udsPedidas=udsPedidas_orig;  // preserve original order qty
+  c.uds=udsRec;        // update uds to actual received — table shows real units
   c.motivoDiff=motivo;
   c.total=montoReal;
   c.confirmaciones=(c.confirmaciones||[]);
-  c.confirmaciones.push({fecha:normalizeDate(fecha),udsRecibidas:udsRec,udsPedidas:c.uds,diferencia:udsRec-c.uds,motivo});
+  c.confirmaciones.push({fecha:normalizeDate(fecha),udsRecibidas:udsRec,udsPedidas:udsPedidas_orig,diferencia:udsRec-udsPedidas_orig,motivo});
 
   // STEP 3: Auto-resolve inventory using corrected costoUnit
   const _matchInv=DB.inventory.find(i=>i.pid===c.prodId&&i.tipo===c.tipo&&i.pres===c.pres);
   const _invMotivo='Recepcion compra #'+c.id
-    +(hayAjuste?' (pedido: '+c.uds+', recibido: '+udsRec+')':'')
+    +(hayAjuste?' (pedido: '+udsPedidas_orig+', recibido: '+udsRec+')':'')
     +(motivo?' — '+motivo:'');
   if(_matchInv){
     const _antes=_matchInv.stock;
@@ -3809,7 +3812,7 @@ async function confirmarRecepcion(id){
   if(prov){
     prov.historial=(prov.historial||[]);
     let histMotivo=c.producto+' x'+udsRec;
-    if(hayAjuste)histMotivo+=' (pedido: '+c.uds+' \u2014 diferencia: '+(udsRec-c.uds)+' uds, monto: '+fmt$(montoReal)+')';
+    if(hayAjuste)histMotivo+=' (pedido: '+udsPedidas_orig+' \u2014 diferencia: '+(udsRec-udsPedidas_orig)+' uds, monto: '+fmt$(montoReal)+')';
     if(motivo)histMotivo+=' | '+motivo;
     prov.historial.push({tipo:'compra_recibida',fecha:normalizeDate(fecha),monto:montoReal,motivo:histMotivo});
   }
@@ -5088,19 +5091,7 @@ else setSyncStatus('none');
 // Recalculate comprometidas on load
 DB.inventory.forEach(i=>{i.comprometidas=getComprometidas(i.id);});
 
-(function migrateComprasTotals(){
-  let fixed=0;
-  DB.purchases.forEach(c=>{
-    if(c.estado==='recibido'&&c.udsRecibidas!=null&&c.uds>0){
-      const costoUnit=c.total/c.uds;
-      const expectedTotal=Math.round(costoUnit*c.udsRecibidas*100)/100;
-      if(c.udsRecibidas!==c.uds&&Math.abs(c.total-expectedTotal)>0.01){
-        c.total=expectedTotal;fixed++;
-      }
-    }
-  });
-  if(fixed>0){saveDB();markPending();console.log('Migrated '+fixed+' compra(s)');}
-})();
+// migrateComprasTotals removed — no longer needed after confirmarRecepcion fix
 syncClientBalances();
 syncProviderTotals();
 renderCatalog();
