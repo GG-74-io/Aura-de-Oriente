@@ -1024,6 +1024,10 @@ function isoToday(){
 }
 
 // Hoy + offset días en DD/MMM/AAAA
+function isoOffsetISO(days){
+  const d=new Date();d.setDate(d.getDate()+(days||0));
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function isoOffset(days){
   const d=new Date();d.setDate(d.getDate()+(days||0));
   return String(d.getDate()).padStart(2,'0')+'/'+MESES_SHORT[d.getMonth()]+'/'+d.getFullYear();
@@ -1776,11 +1780,14 @@ function openM(id){
     }
   }
   if(id==='m-venta'){
-    sv('v-fecha',TODAY);sv('v-fprimer',isoOffset(15));
-    $$('v-cli').innerHTML='<option value="">Selecciona...</option>'+DB.clients.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-    buildVentaProductos();
-    sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');sv('v-quinc','200');sv('v-precio-u','950');sv('v-obs','');
-    calcVentaTotal();renderCalPagos();
+    try{
+      const _vFecha=$$('v-fecha');if(_vFecha)_vFecha.value=TODAY_ISO;
+      const _vFp=$$('v-fprimer');if(_vFp){const d=new Date();d.setDate(d.getDate()+15);_vFp.value=d.toISOString().split('T')[0];}
+      $$('v-cli').innerHTML='<option value="">Selecciona...</option>'+DB.clients.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+      buildVentaProductos();
+      sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');sv('v-quinc','200');sv('v-precio-u','950');sv('v-obs','');
+      calcVentaTotal();renderCalPagos();
+    }catch(e){console.error('m-venta init error:',e);}
   }
   if(id==='m-cli'){
     $$('cli-modal-title').textContent='Nuevo cliente';
@@ -3416,7 +3423,7 @@ function editInv(id){
   sv('inv-stock',i.stock);sv('inv-costo',i.costo);sv('inv-precio',i.precio);sv('inv-nota',i.nota||'');sv('inv-motivo','');
   consigOn=!!(i.consig);
   $$('consig-tw2').classList.toggle('on',consigOn);$$('consig-form').style.display=consigOn?'block':'none';
-  if(consigOn){sv('inv-cuds',i.cuds||0);sv('inv-cprecio',i.cprecio||950);sv('inv-cprov',i.cprov||'');sv('inv-ccom',i.ccom||20);sv('inv-ccond',i.ccond||'');sv('inv-cvenc',i.cvenc||'');}
+  if(consigOn){sv('inv-cuds',i.cuds||0);sv('inv-cprecio',i.cprecio||950);sv('inv-cprov',i.cprov||'');sv('inv-ccom',i.ccom||20);sv('inv-ccond',i.ccond||'');(function(){const _d=dateToISO(i.cvenc||'');if($$('inv-cvenc'))$$('inv-cvenc').value=_d||'';})();}
   $$('m-inv').classList.add('open');
 }
 
@@ -3623,7 +3630,7 @@ function editCompra(id){
   $$('cp-prov').innerHTML='<option value="">Selecciona...</option>'+DB.providers.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
   $$('cp-prod').innerHTML='<option value="">Selecciona...</option>'+DB.products.map(p=>`<option value="${p.id}">${p.nombre} (${arr(p.marca)[0]||p.marca})</option>`).join('');
   $$('cp-pres').innerHTML='<option value="">--</option>'+LISTS.presentaciones.map(v=>`<option>${v}</option>`).join('');
-  $$('cp-prov').value=c.provId;$$('cp-prod').value=c.prodId;sv('cp-fecha',c.fecha);$$('cp-tipo').value=c.tipo;$$('cp-pres').value=c.pres;
+  $$('cp-prov').value=c.provId;$$('cp-prod').value=c.prodId;(function(){const _d=dateToISO(c.fecha);if(_d&&$$('cp-fecha'))$$('cp-fecha').value=_d;})();$$('cp-tipo').value=c.tipo;$$('cp-pres').value=c.pres;
   sv('cp-uds',c.uds);sv('cp-costo',c.costo);sv('cp-total',c.total);sv('cp-notas',c.notas||'');
   const h=$$('compra-form-title');if(h)h.textContent='Editar pedido';
   sv('cp-razon','');
@@ -4724,8 +4731,8 @@ function initReporte(){
   const rp=$$('r-proveedor');rp.innerHTML='<option value="">Todos los proveedores</option>'+DB.providers.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
   const rprod=$$('r-producto');rprod.innerHTML='<option value="">Todos los productos</option>'+[...new Set(DB.sales.map(v=>v.producto))].sort().map(x=>`<option value="${x}">${x}</option>`).join('');
   // Default dates: last 30 days
-  if(!cv('r-desde'))sv('r-desde',isoOffset(-30));
-  if(!cv('r-hasta'))sv('r-hasta',TODAY);
+  if(!cv('r-desde'))sv('r-desde',isoOffsetISO(-30));
+  if(!cv('r-hasta'))sv('r-hasta',TODAY_ISO);
   renderReporte();
 }
 
