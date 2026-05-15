@@ -1865,8 +1865,8 @@ let prodFormExistingImgs=[];    // [{id,url}]
 let prodFormMainImgId=null;
 
 function familiaEmoji(f){
-  const m={'Oriental':'🌙','Floral':'🌸','Amaderado':'🌲','Fresco':'💨','Oud':'🪵','Gourmand':'🍫','Acuatico':'💧','Citrico':'🍋','Chipre':'🌿','Fougere':'🌾','Aromatico':'🌿'};
-  return m[arr(f)[0]]||'🌸';
+  const m={'Oriental':'🌙','Floral':'C:','Amaderado':'F:','Fresco':'>','Oud':'🪵','Gourmand':'🍫','Acuatico':'💧','Citrico':'🍋','Chipre':'S:','Fougere':'🌾','Aromatico':'S:'};
+  return m[arr(f)[0]]||'C:';
 }
 
 function openProductForm(copyFrom){
@@ -2273,9 +2273,9 @@ function renderCards(list,gid){
           ${p.intensidad?`<span class="tag" style="color:var(--teal);border-color:rgba(42,95,95,.3);font-size:10px">${p.intensidad}</span>`:''}
         </div>
         ${p.inombre?`<div class="pcard-inspo" style="margin-top:4px;font-size:10px">&#8776; ${p.imarca} ${p.inombre}</div>`:''}
-        ${arr(p.top).length?`<div style="font-size:9px;color:var(--mist);margin-top:2px">🌿 ${arr(p.top).slice(0,3).join(', ')}</div>`:''}
-        ${arr(p.cor).length?`<div style="font-size:9px;color:var(--mist)">🌸 ${arr(p.cor).slice(0,3).join(', ')}</div>`:''}
-        ${arr(p.fondo).length?`<div style="font-size:9px;color:var(--mist)">🌲 ${arr(p.fondo).slice(0,3).join(', ')}</div>`:''}
+        ${arr(p.top).length?`<div style="font-size:9px;color:var(--mist);margin-top:2px">S: ${arr(p.top).slice(0,3).join(', ')}</div>`:''}
+        ${arr(p.cor).length?`<div style="font-size:9px;color:var(--mist)">C: ${arr(p.cor).slice(0,3).join(', ')}</div>`:''}
+        ${arr(p.fondo).length?`<div style="font-size:9px;color:var(--mist)">F: ${arr(p.fondo).slice(0,3).join(', ')}</div>`:''}
       </div>
       <div class="pcard-foot">
         <span class="pcard-price">${fmt$(p.precio)}</span>
@@ -2411,7 +2411,7 @@ function openCompare(){
   body.innerHTML=`<table class="compare-table" style="width:100%">
     <thead><tr>
       <th style="width:120px">Campo</th>
-      ${prods.map(p=>`<th><div style="text-align:center"><div style="height:70px;background:var(--surf2);border-radius:var(--rs);overflow:hidden;margin-bottom:5px">${getProdMainImgUrl(p)?`<img src="${getProdMainImgUrl(p)}" style="width:100%;height:100%;object-fit:cover">`:'<div style="font-size:28px;line-height:70px;text-align:center">🌸</div>'}</div><strong style="font-size:12px">${p.nombre}</strong><br><span style="font-size:10px;color:var(--mist)">${arr(p.marca)[0]||''}</span></div></th>`).join('')}
+      ${prods.map(p=>`<th><div style="text-align:center"><div style="height:70px;background:var(--surf2);border-radius:var(--rs);overflow:hidden;margin-bottom:5px">${getProdMainImgUrl(p)?`<img src="${getProdMainImgUrl(p)}" style="width:100%;height:100%;object-fit:cover">`:'<div style="font-size:28px;line-height:70px;text-align:center">C:</div>'}</div><strong style="font-size:12px">${p.nombre}</strong><br><span style="font-size:10px;color:var(--mist)">${arr(p.marca)[0]||''}</span></div></th>`).join('')}
     </tr></thead>
     <tbody>
     ${fields.map(f=>{
@@ -2661,16 +2661,16 @@ function renderMis(){
         ${MIS_FIELDS.nombre?`<div class="pcard-name">${p.nombre}</div>`:''}
         <div style="font-size:9px;color:var(--mist);text-transform:uppercase">${marca}</div>
         ${MIS_FIELDS.inspiracion&&p.inombre?`<div class="pcard-inspo">&#8776; ${p.imarca} ${p.inombre}</div>`:''}
-        ${MIS_FIELDS.notas&&arr(p.top).length?`<div style="font-size:9px;color:var(--mist)">🌿 ${arr(p.top).join(', ')}</div>`:''}
-        ${MIS_FIELDS.notas&&arr(p.cor).length?`<div style="font-size:9px;color:var(--mist)">🌸 ${arr(p.cor).join(', ')}</div>`:''}
-        ${MIS_FIELDS.notas&&arr(p.fondo).length?`<div style="font-size:9px;color:var(--mist)">🌲 ${arr(p.fondo).join(', ')}</div>`:''}
+        ${MIS_FIELDS.notas&&arr(p.top).length?`<div style="font-size:9px;color:var(--mist)">S: ${arr(p.top).join(', ')}</div>`:''}
+        ${MIS_FIELDS.notas&&arr(p.cor).length?`<div style="font-size:9px;color:var(--mist)">C: ${arr(p.cor).join(', ')}</div>`:''}
+        ${MIS_FIELDS.notas&&arr(p.fondo).length?`<div style="font-size:9px;color:var(--mist)">F: ${arr(p.fondo).join(', ')}</div>`:''}
         ${MIS_FIELDS.temporada&&arr(p.temporada).length?`<div style="font-size:9px;color:var(--mist)">☀️ ${arr(p.temporada).join(', ')}</div>`:''}
         ${MIS_FIELDS.concentracion&&p.concentracion?`<div style="font-size:9px;color:var(--gold)">${p.concentracion}</div>`:''}
         ${MIS_FIELDS.duracion&&p.dur?`<div style="font-size:9px;color:var(--mist)">⏱ ${p.dur}</div>`:''}
         ${MIS_FIELDS.intensidad&&p.intensidad?`<div style="font-size:9px;color:var(--gold)">◆ ${p.intensidad}</div>`:''}
-        ${MIS_FIELDS.proyeccion&&p.proy?`<div style="font-size:9px;color:var(--mist)">💨 ${p.proy}</div>`:''}
+        ${MIS_FIELDS.proyeccion&&p.proy?`<div style="font-size:9px;color:var(--mist)">> ${p.proy}</div>`:''}
         ${MIS_FIELDS.perfume_principal&&p.perfume_principal?`<div style="font-size:9px;color:var(--mist)">PP: ${p.perfume_principal}</div>`:''}
-        ${MIS_FIELDS.inspo_completa&&p.imarca?`<div style="font-size:9px;color:var(--mist)">🔎 ${p.imarca} ${p.inombre||''}</div>`:''}
+        ${MIS_FIELDS.inspo_completa&&p.imarca?`<div style="font-size:9px;color:var(--mist)">~ ${p.imarca} ${p.inombre||''}</div>`:''}
         ${MIS_FIELDS.genero&&p.genero?`<span class="tag" style="font-size:9px">${p.genero}</span>`:''}
         ${MIS_FIELDS.marca?`<span class="tag" style="font-size:9px">${arr(p.marca)[0]||p.marca||''}</span>`:''}
         <div class="pcard-tags">${p.concentracion?`<span class="tag" style="color:var(--gold);border-color:rgba(201,146,42,.35);font-weight:500">${p.concentracion}</span>`:''}${MIS_FIELDS.familia?arr(p.familia).map(f=>`<span class="tag">${f}</span>`).join(''):''}${MIS_FIELDS.uso?arr(p.uso).map(u=>`<span class="tag">${u}</span>`).join(''):''}</div>
@@ -3879,7 +3879,7 @@ function vRow(v){
   return `<tr${needEnt?' style="background:rgba(201,146,42,.05)"':''}>
     <td style="font-size:11px;color:var(--mist)">${fmtDate(v.fecha)}</td>
     <td style="font-weight:500">${v.cliente}</td>
-    <td style="font-size:12px">${v.esPaquete?'🎁 ':''} ${v.producto}${v.observaciones?`<div style="font-size:10px;color:var(--mist)">${v.observaciones}</div>`:''}</td>
+    <td style="font-size:12px">${v.esPaquete?'[Paq] ':''} ${v.producto}${v.observaciones?`<div style="font-size:10px;color:var(--mist)">${v.observaciones}</div>`:''}</td>
     <td>${v.uds}</td>
     <td>${fmt$(v.total)}</td>
     <td style="color:var(--ok)">${fmt$(v.pagado)}</td>
@@ -3911,7 +3911,7 @@ function buildVentaProductos(){
   });
   DB.packages.forEach(pkg=>{
     if(!pkgEsActivo(pkg))return;
-    const cap=getPkgCapacidad(pkg);if(cap>0)opts.push(`<option value="pkg:${pkg.id}">🎁 ${pkg.nombre} — exist: ${cap} — ${fmt$(pkg.precio)}</option>`);
+    const cap=getPkgCapacidad(pkg);if(cap>0)opts.push(`<option value="pkg:${pkg.id}">[Pkg] ${pkg.nombre} — exist: ${cap} — ${fmt$(pkg.precio)}</option>`);
   });
   $$('v-prod').innerHTML='<option value="">— Selecciona —</option>'+opts.join('');
 }
@@ -4621,7 +4621,7 @@ function setPkgFiltro(f,btn){_pkgFiltro=f;document.querySelectorAll('#s-paquetes
 function renderPkg(){
   const c=$$('pkg-list');
   const _pl=DB.packages.filter(pk=>_pkgFiltro==='todos'?true:_pkgFiltro==='activo'?pkgEsActivo(pk):!pkgEsActivo(pk));
-  if(!_pl.length){c.innerHTML='<div class="empty"><div class="empty-icon">🎁</div><p>Sin paquetes en este filtro</p></div>';return;}
+  if(!_pl.length){c.innerHTML='<div class="empty"><div class="empty-icon">[Paq]</div><p>Sin paquetes en este filtro</p></div>';return;}
   c.innerHTML=_pl.map(pk=>{
     const cap=getPkgCapacidad(pk);const _act=pkgEsActivo(pk);
     return `<div style="background:var(--surf);border:.5px solid ${_act?'var(--bord)':'var(--mist)'};border-radius:var(--r);padding:14px;margin-bottom:11px;opacity:${_act?1:0.6}">
