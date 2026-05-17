@@ -3260,55 +3260,19 @@ function delAdminItem(key,val){LISTS[key]=(LISTS[key]||[]).filter(v=>v!==val);sa
 function downloadTemplate(){
   if(!window.XLSX){toastMsg('Cargando...','err');setTimeout(downloadTemplate,1500);return;}
 
-  // ── Helper: column letter (0-based) ──────────────────────────────────────
   const col2l=n=>n<26?String.fromCharCode(65+n):'A'+String.fromCharCode(65+n-26);
-  const cellRef=(c,r)=>col2l(c)+(r+1); // 0-based col, 0-based row → "B6"
+  // sqref uses NO dollar signs: "B6:B105"
+  const hRangeSq=(cl,rs,re)=>`${cl}${rs}:${cl}${re}`;
+  // formula1 range uses dollar signs: "$B$2:$B$20"
+  const absRange=(cl,rs,re)=>`$${cl}$${rs}:$${cl}$${re}`;
 
-  // ── LISTS snapshot ───────────────────────────────────────────────────────
   const L=LISTS;
   const fuentes   =['Oud Miraj','Fragrantica','Proveedor propio','Otro'];
   const generos   =['Mujer','Hombre','Unisex'];
   const sinono    =['SI','NO'];
-  const intensidades = L.intensidades||['Ligera','Media','Alta','Fuerte'];
+  const intensidades=L.intensidades&&L.intensidades.length?L.intensidades:['Ligera','Media','Alta','Fuerte'];
 
-  // ── LISTAS sheet (all LISTS keys, each as a column) ──────────────────────
-  const listKeys  = Object.keys(L);
-  const listVals  = listKeys.map(k=>L[k]);
-  const maxListRows = Math.max(...listVals.map(v=>v.length));
-  const listAOA  = [listKeys]; // header row = key names
-  for(let r=0;r<maxListRows;r++){
-    listAOA.push(listKeys.map((_,c)=>listVals[c][r]||''));
-  }
-  // Extra static lists appended as extra columns after LISTS keys
-  const extraListHeaders=['fuente','genero','si_no','intensidad'];
-  const extraListVals=[fuentes,generos,sinono,intensidades];
-  const extraMaxRows=Math.max(...extraListVals.map(v=>v.length));
-  listAOA[0]=[...listKeys,...extraListHeaders];
-  for(let r=1;r<listAOA.length;r++){
-    extraListVals.forEach(v=>listAOA[r].push(v[r-1]||''));
-  }
-  for(let r=listAOA.length;r<=extraMaxRows;r++){
-    listAOA.push([...listKeys.map(()=>''),...extraListVals.map(v=>v[r-1]||'')]);
-  }
-
-  const wsLists=XLSX.utils.aoa_to_sheet(listAOA);
-  wsLists['!cols']=listAOA[0].map(()=>({wch:20}));
-
-  // ── Column definitions for Perfumes sheet ────────────────────────────────
-  // listSheet col indices (0-based) for named ranges used in validations
-  // Listas sheet structure: [listKeys..., fuente, genero, si_no, intensidad]
-  const lsIdx={}; listAOA[0].forEach((h,i)=>lsIdx[h]=i);
-  const lsLetter=key=>col2l(lsIdx[key]); // col letter in Listas sheet
-  const lsRange =key=>`Listas!$${lsLetter(key)}$2:$${lsLetter(key)}$${1+listVals[listKeys.indexOf(key)]?.length||Math.max(...extraListVals.map(v=>v.length))+1}`;
-
-  // Build lsRange for extra lists too
-  const lsRangeExtra=(key)=>{
-    const c=col2l(lsIdx[key]);
-    const len=extraListVals[extraListHeaders.indexOf(key)]?.length||4;
-    return `Listas!$${c}$2:$${c}$${1+len}`;
-  };
-
-  // ── Headers for Perfumes sheet (25 cols) ─────────────────────────────────
+  // ── Headers (25 cols, A-Y) ───────────────────────────────────────────────
   const headers=[
     'nombre_arabe','marca_arabe','concentracion','fuente','precio',
     'inspo_marca','inspo_nombre','genero','familia_olfativa','uso_sugerido',
@@ -3317,6 +3281,45 @@ function downloadTemplate(){
     'mi_negocio','favorito','prospecto','verificado','no_vendible','oculto'
   ];
   const hIdx={}; headers.forEach((h,i)=>hIdx[h]=i);
+  const hL=name=>col2l(hIdx[name]);
+
+  const DATA_ROW_START=6;   // Excel row of first data row (1-based)
+  const DATA_ROW_END=105;   // Excel row of last data row (100 rows)
+
+  // ── LISTAS sheet ─────────────────────────────────────────────────────────
+  // Columns in order — each becomes a column in the Listas sheet
+  const listsDef=[
+    {key:'marcas_arabes',    vals:L.marcas_arabes   ||[]},
+    {key:'concentraciones',  vals:L.concentraciones ||[]},
+    {key:'marcas_inspiracion',vals:L.marcas_inspiracion||[]},
+    {key:'familias',         vals:L.familias        ||[]},
+    {key:'usos',             vals:L.usos            ||[]},
+    {key:'temporadas',       vals:L.temporadas      ||[]},
+    {key:'duraciones',       vals:L.duraciones      ||[]},
+    {key:'proyecciones',     vals:L.proyecciones    ||[]},
+    {key:'intensidades',     vals:intensidades},
+    {key:'notas_top',        vals:L.notas_top       ||[]},
+    {key:'notas_corazon',    vals:L.notas_corazon   ||[]},
+    {key:'notas_fondo',      vals:L.notas_fondo     ||[]},
+    {key:'fuente',           vals:fuentes},
+    {key:'genero',           vals:generos},
+    {key:'si_no',            vals:sinono},
+  ];
+  // Col letter in Listas sheet for each key
+  const listsIdx={}; listsDef.forEach((d,i)=>listsIdx[d.key]=i);
+  const lsL=key=>col2l(listsIdx[key]);
+  const lsAbsRange=key=>{
+    const c=lsL(key); const n=listsDef[listsIdx[key]].vals.length;
+    return absRange(c,2,1+n);   // "$A$2:$A$12"
+  };
+
+  const maxLRows=Math.max(...listsDef.map(d=>d.vals.length));
+  const listsAOA=[listsDef.map(d=>d.key)];
+  for(let r=0;r<maxLRows;r++)
+    listsAOA.push(listsDef.map(d=>d.vals[r]||''));
+
+  const wsLists=XLSX.utils.aoa_to_sheet(listsAOA);
+  wsLists['!cols']=listsDef.map(()=>({wch:22}));
 
   // ── Sample row ────────────────────────────────────────────────────────────
   const sample=[
@@ -3327,219 +3330,175 @@ function downloadTemplate(){
     'SI','SI','NO','SI','NO','NO'
   ];
 
-  // Data rows: row 0 = title, 1 = multi-val note, 2 = inventario note, 3 = blank, 4 = headers, 5 = sample
-  // Data rows for validation: rows 5..104 (0-based) = Excel rows 6..105
-  const HEADER_ROW=4; // 0-based
-  const DATA_START=5; // 0-based (first data row, the sample)
-  const DATA_END=104;  // 0-based (100 rows total)
-  const DATA_ROWS=DATA_END-DATA_START+1; // 100
-
   const aoa=[
-    ['AURA DE ORIENTE \u2014 Plantilla de importacion incremental de Perfumes'],
+    ['AURA DE ORIENTE - Plantilla de importacion incremental de Perfumes'],
     ['Para multiples valores en un campo usa | como separador. Ej: Oriental|Floral'],
     ['Tipo, Presentacion e Inventario se configuran por separado en la seccion Inventario'],
     [''],
-    headers,
-    sample
+    headers, sample
   ];
-  // Pad to 105 rows (100 data rows)
-  while(aoa.length<=DATA_END) aoa.push([]);
+  while(aoa.length<=DATA_ROW_END-1) aoa.push([]);
 
   const ws=XLSX.utils.aoa_to_sheet(aoa);
   ws['!cols']=headers.map((_,i)=>({wch:i===14||i===18?40:i===0?24:i===6?20:16}));
 
-  // ── Helper: Excel col letter for a header name ────────────────────────────
-  const hL=name=>col2l(hIdx[name]);
-  const hRange=name=>`$${hL(name)}$${DATA_START+1}:$${hL(name)}$${DATA_END+1}`; // Excel 1-based
-
-  // ── DATA VALIDATIONS (warning style = allows entry but shows warning) ────
-  // SheetJS community does NOT support !dataValidation natively.
-  // We inject raw XML into the sheet after writing.
-  // Build the <dataValidations> XML block.
-
-  // Columns with single-value dropdown (list validation)
-  // sqref = Excel range string (1-based rows)
-  const dvList=[]; // {sqref, formula1 (quoted comma list OR range ref)}
-
-  // marca_arabe → B6:B105
-  dvList.push({sqref:hRange('marca_arabe'),
-    f1:`Listas!$${lsLetter('marcas_arabes')}$2:$${lsLetter('marcas_arabes')}$${1+(L.marcas_arabes?.length||10)}`});
-  // concentracion → C
-  dvList.push({sqref:hRange('concentracion'),
-    f1:`Listas!$${lsLetter('concentraciones')}$2:$${lsLetter('concentraciones')}$${1+(L.concentraciones?.length||8)}`});
-  // fuente → D (fixed list, inline)
-  dvList.push({sqref:hRange('fuente'),
-    f1:`Listas!$${lsLetter('fuente')}$2:$${lsLetter('fuente')}$${1+fuentes.length}`});
-  // inspo_marca → F
-  dvList.push({sqref:hRange('inspo_marca'),
-    f1:`Listas!$${lsLetter('marcas_inspiracion')}$2:$${lsLetter('marcas_inspiracion')}$${1+(L.marcas_inspiracion?.length||10)}`});
-  // genero → H
-  dvList.push({sqref:hRange('genero'),
-    f1:`Listas!$${lsLetter('genero')}$2:$${lsLetter('genero')}$${1+generos.length}`});
-  // duracion → P
-  dvList.push({sqref:hRange('duracion'),
-    f1:`Listas!$${lsLetter('duraciones')}$2:$${lsLetter('duraciones')}$${1+(L.duraciones?.length||6)}`});
-  // proyeccion → Q
-  dvList.push({sqref:hRange('proyeccion'),
-    f1:`Listas!$${lsLetter('proyecciones')}$2:$${lsLetter('proyecciones')}$${1+(L.proyecciones?.length||6)}`});
-  // intensidad → R
-  dvList.push({sqref:hRange('intensidad'),
-    f1:`Listas!$${lsLetter('intensidad')}$2:$${lsLetter('intensidad')}$${1+intensidades.length}`});
-  // SI/NO columns → T U V W X Y
-  ['mi_negocio','favorito','prospecto','verificado','no_vendible','oculto'].forEach(h=>{
-    dvList.push({sqref:hRange(h),
-      f1:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$${1+sinono.length}`});
-  });
-
-  // Build dataValidations XML
-  // showDropDown="0" = show dropdown UI
-  // showErrorMessage="1" errorStyle="warning" = warn but allow
-  let dvXml=`<dataValidations count="${dvList.length}">`;
-  dvList.forEach(dv=>{
-    dvXml+=`<dataValidation type="list" showDropDown="0" showErrorMessage="1" errorStyle="warning" `+
-      `errorTitle="Valor no en lista" error="Este valor no esta en la lista de referencia. Puedes continuar." `+
-      `sqref="${dv.sqref}"><formula1>${dv.f1}</formula1></dataValidation>`;
-  });
-  dvXml+=`</dataValidations>`;
-
-  // ── CONDITIONAL FORMATTING (red fill when value not in list) ─────────────
-  // For each validated column, add a CF rule:
-  // formula: =AND(B6<>"",COUNTIF(range,B6)=0)  → red fill
-  // For multi-value cols (familia, uso, temporada, notas_*) same approach
-  // but COUNTIF won't match the combined "A|B" string — that's fine, 
-  // the red flag means "custom value entered" which is the intended behavior.
-
-  // Style index for red fill — we'll inject into styles.xml as dxf index 0
-  // CF rules reference dxfId="0"
-
-  // All columns that get red-highlight
-  const cfCols=[
-    {h:'marca_arabe',    range:`Listas!$${lsLetter('marcas_arabes')}$2:$${lsLetter('marcas_arabes')}$1000`},
-    {h:'concentracion',  range:`Listas!$${lsLetter('concentraciones')}$2:$${lsLetter('concentraciones')}$1000`},
-    {h:'fuente',         range:`Listas!$${lsLetter('fuente')}$2:$${lsLetter('fuente')}$1000`},
-    {h:'inspo_marca',    range:`Listas!$${lsLetter('marcas_inspiracion')}$2:$${lsLetter('marcas_inspiracion')}$1000`},
-    {h:'genero',         range:`Listas!$${lsLetter('genero')}$2:$${lsLetter('genero')}$1000`},
-    {h:'familia_olfativa',range:`Listas!$${lsLetter('familias')}$2:$${lsLetter('familias')}$1000`},
-    {h:'uso_sugerido',   range:`Listas!$${lsLetter('usos')}$2:$${lsLetter('usos')}$1000`},
-    {h:'temporada',      range:`Listas!$${lsLetter('temporadas')}$2:$${lsLetter('temporadas')}$1000`},
-    {h:'notas_salida',   range:`Listas!$${lsLetter('notas_top')}$2:$${lsLetter('notas_top')}$1000`},
-    {h:'notas_corazon',  range:`Listas!$${lsLetter('notas_corazon')}$2:$${lsLetter('notas_corazon')}$1000`},
-    {h:'notas_fondo',    range:`Listas!$${lsLetter('notas_fondo')}$2:$${lsLetter('notas_fondo')}$1000`},
-    {h:'duracion',       range:`Listas!$${lsLetter('duraciones')}$2:$${lsLetter('duraciones')}$1000`},
-    {h:'proyeccion',     range:`Listas!$${lsLetter('proyecciones')}$2:$${lsLetter('proyecciones')}$1000`},
-    {h:'intensidad',     range:`Listas!$${lsLetter('intensidad')}$2:$${lsLetter('intensidad')}$1000`},
-    {h:'mi_negocio',     range:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$1000`},
-    {h:'favorito',       range:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$1000`},
-    {h:'prospecto',      range:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$1000`},
-    {h:'verificado',     range:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$1000`},
-    {h:'no_vendible',    range:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$1000`},
-    {h:'oculto',         range:`Listas!$${lsLetter('si_no')}$2:$${lsLetter('si_no')}$1000`},
-  ];
-
-  let cfXml='';
-  cfCols.forEach(({h,range})=>{
-    const cl=hL(h);
-    const firstCell=`${cl}${DATA_START+1}`; // e.g. B6
-    const sqref=hRange(h);
-    // Formula anchors the col ($B) but allows row to float (no $ on row number)
-    const formula=`AND($${cl}${DATA_START+1}<>"",COUNTIF(${range},$${cl}${DATA_START+1})=0)`;
-    cfXml+=`<conditionalFormatting sqref="${sqref}">`;
-    cfXml+=`<cfRule type="expression" dxfId="0" priority="1" stopIfTrue="0">`;
-    cfXml+=`<formula>${formula}</formula></cfRule></conditionalFormatting>`;
-  });
-
-  // Store XML extras to inject after XLSX.write
-  ws['!dvXml']=dvXml;
-  ws['!cfXml']=cfXml;
-
-  // ── Build workbook ────────────────────────────────────────────────────────
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Perfumes');
   XLSX.utils.book_append_sheet(wb,wsLists,'Listas');
 
-  // ── Write to ArrayBuffer then inject raw XML ──────────────────────────────
-  // SheetJS writes the xlsx as a zip. We reopen it, patch the XML, re-zip.
+  // ── Write base xlsx to ArrayBuffer ───────────────────────────────────────
   const wbOut=XLSX.write(wb,{type:'array',bookType:'xlsx'});
 
-  // Use fflate (bundled in xlsx.full) or fall back to manual approach
-  // Actually xlsx.full includes its own zip — we can use XLSX.CFB or XLSX.utils
-  // Easier: inject directly via sheet['!sheetXmlPatch'] before write, 
-  // but that's not public API.
-  //
-  // Cleanest approach that works with community edition:
-  // Use a tiny inline zip patcher using the DataView of the xlsx ArrayBuffer.
-  // But that's very complex. Instead: use the undocumented XLSX internal zip.
-
-  // XLSX.write returns an ArrayBuffer. We convert to Blob and use JSZip if available,
-  // OR use the simpler approach: inject via XLSX sheet XML hook.
-  //
-  // Pragmatic solution that actually works:
-  // 1. Serialize the sheet XML including our extra nodes BEFORE XLSX writes it,
-  //    by using ws['!xml'] pre/post injection via a wrapper.
-  //
-  // Since SheetJS 0.18 doesn't expose easy XML injection, 
-  // we use the ArrayBuffer + a minimal zip editor we write inline.
-
+  // ── Patch xlsx zip with XML injections ───────────────────────────────────
   (async()=>{
     try{
-      // Attempt to use JSZip if loaded, otherwise load it
-      let JSZip=window.JSZip;
-      if(!JSZip){
+      // Load JSZip if needed
+      if(!window.JSZip){
         await new Promise((res,rej)=>{
           const s=document.createElement('script');
           s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-          s.onload=res; s.onerror=rej;
+          s.onload=res; s.onerror=()=>rej(new Error('JSZip no disponible'));
           document.head.appendChild(s);
         });
-        JSZip=window.JSZip;
       }
 
       const zip=await JSZip.loadAsync(wbOut);
 
-      // ── Patch xl/worksheets/sheet1.xml ──────────────────────────────────
-      const sheetXml=await zip.file('xl/worksheets/sheet1.xml').async('string');
-      // Insert dataValidations + conditionalFormatting before </worksheet>
-      let patchedSheet=sheetXml;
-      // Remove existing (empty) dataValidations if present
-      patchedSheet=patchedSheet.replace(/<dataValidations[^>]*\/>/g,'');
-      patchedSheet=patchedSheet.replace(/<dataValidations[\s\S]*?<\/dataValidations>/g,'');
-      patchedSheet=patchedSheet.replace(/<conditionalFormatting[\s\S]*?<\/conditionalFormatting>/g,'');
-      // Insert before </worksheet>
-      patchedSheet=patchedSheet.replace('</worksheet>',dvXml+cfXml+'</worksheet>');
-      zip.file('xl/worksheets/sheet1.xml',patchedSheet);
+      // ── 1. workbook.xml — add DefinedNames for each list (cross-sheet refs) ──
+      // Excel requires named ranges in workbook for cross-sheet list validation
+      let wbXml=await zip.file('xl/workbook.xml').async('string');
+      let defNames='';
+      listsDef.forEach((d,i)=>{
+        const c=lsL(d.key); const n=d.vals.length;
+        // localSheetId="0" means it's a workbook-scoped name
+        defNames+=`<definedName name="_list_${d.key}">'Listas'!$${c}$2:$${c}$${1+n}</definedName>`;
+      });
+      if(defNames){
+        if(wbXml.includes('<definedNames>')){
+          wbXml=wbXml.replace('<definedNames>','<definedNames>'+defNames);
+        } else {
+          wbXml=wbXml.replace('</workbook>','<definedNames>'+defNames+'</definedNames></workbook>');
+        }
+        zip.file('xl/workbook.xml',wbXml);
+      }
 
-      // ── Patch xl/styles.xml — add dxf (differential format) for red fill ─
+      // ── 2. styles.xml — add dxf (red fill) at index 0 ───────────────────
       let stylesXml=await zip.file('xl/styles.xml').async('string');
-      const redDxf=`<dxf><fill><patternFill><bgColor rgb="FFFF9999"/></patternFill></fill></dxf>`;
+      const redDxf='<dxf><fill><patternFill><bgColor rgb="FFFF9999"/></patternFill></fill></dxf>';
       if(stylesXml.includes('<dxfs count="0"/>')){
         stylesXml=stylesXml.replace('<dxfs count="0"/>',`<dxfs count="1">${redDxf}</dxfs>`);
-      } else if(stylesXml.includes('<dxfs')){
-        // increment count and prepend our dxf at index 0
-        stylesXml=stylesXml.replace(/<dxfs count="(\d+)">/,(m,n)=>`<dxfs count="${parseInt(n)+1}">`)
-          .replace('<dxfs',`<dxfs`); // keep tag
-        stylesXml=stylesXml.replace(/(<dxfs[^>]*>)/,`$1${redDxf}`);
+      } else if(/<dxfs count="\d+"/.test(stylesXml)){
+        stylesXml=stylesXml.replace(/<dxfs count="(\d+)">/,(m,n)=>`<dxfs count="${parseInt(n)+1}>`)
+          .replace(/(<dxfs[^>]*>)/,'$1'+redDxf);
       } else {
-        // No dxfs section — add one before </styleSheet>
         stylesXml=stylesXml.replace('</styleSheet>',`<dxfs count="1">${redDxf}</dxfs></styleSheet>`);
       }
       zip.file('xl/styles.xml',stylesXml);
 
-      // ── Generate final file ───────────────────────────────────────────────
-      const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      // ── 3. sheet1.xml — inject conditionalFormatting + dataValidations ───
+      let shXml=await zip.file('xl/worksheets/sheet1.xml').async('string');
+
+      // Build conditionalFormatting blocks (must come BEFORE dataValidations in OOXML order)
+      // One <conditionalFormatting> per column
+      // Formula: AND(B6<>"", COUNTIF(_list_marcas_arabes, B6)=0)
+      // CF formula uses mixed ref: $B6 (col fixed, row relative)
+      const cfCols=[
+        {h:'marca_arabe',    listKey:'marcas_arabes'},
+        {h:'concentracion',  listKey:'concentraciones'},
+        {h:'fuente',         listKey:'fuente'},
+        {h:'inspo_marca',    listKey:'marcas_inspiracion'},
+        {h:'genero',         listKey:'genero'},
+        {h:'familia_olfativa',listKey:'familias'},
+        {h:'uso_sugerido',   listKey:'usos'},
+        {h:'temporada',      listKey:'temporadas'},
+        {h:'notas_salida',   listKey:'notas_top'},
+        {h:'notas_corazon',  listKey:'notas_corazon'},
+        {h:'notas_fondo',    listKey:'notas_fondo'},
+        {h:'duracion',       listKey:'duraciones'},
+        {h:'proyeccion',     listKey:'proyecciones'},
+        {h:'intensidad',     listKey:'intensidades'},
+        {h:'mi_negocio',     listKey:'si_no'},
+        {h:'favorito',       listKey:'si_no'},
+        {h:'prospecto',      listKey:'si_no'},
+        {h:'verificado',     listKey:'si_no'},
+        {h:'no_vendible',    listKey:'si_no'},
+        {h:'oculto',         listKey:'si_no'},
+      ];
+      let cfXml='';
+      cfCols.forEach(({h,listKey},pri)=>{
+        const cl=hL(h);
+        const sqref=hRangeSq(cl,DATA_ROW_START,DATA_ROW_END); // no $ signs
+        const lc=lsL(listKey);
+        const ln=listsDef[listsIdx[listKey]].vals.length;
+        // COUNTIF with absolute sheet reference
+        const countifRange=`'Listas'!$${lc}$2:$${lc}$${1+ln}`;
+        const formula=`AND($${cl}${DATA_ROW_START}&lt;&gt;&quot;&quot;,COUNTIF(${countifRange},$${cl}${DATA_ROW_START})=0)`;
+        cfXml+=`<conditionalFormatting sqref="${sqref}">`;
+        cfXml+=`<cfRule type="expression" dxfId="0" priority="${pri+1}">`;
+        cfXml+=`<formula>${formula}</formula></cfRule></conditionalFormatting>`;
+      });
+
+      // Build dataValidations block (goes AFTER conditionalFormatting)
+      // sqref: no $ signs. formula1: named range reference "_list_key"
+      const dvCols=[
+        {h:'marca_arabe',  listKey:'marcas_arabes'},
+        {h:'concentracion',listKey:'concentraciones'},
+        {h:'fuente',       listKey:'fuente'},
+        {h:'inspo_marca',  listKey:'marcas_inspiracion'},
+        {h:'genero',       listKey:'genero'},
+        {h:'duracion',     listKey:'duraciones'},
+        {h:'proyeccion',   listKey:'proyecciones'},
+        {h:'intensidad',   listKey:'intensidades'},
+        {h:'mi_negocio',   listKey:'si_no'},
+        {h:'favorito',     listKey:'si_no'},
+        {h:'prospecto',    listKey:'si_no'},
+        {h:'verificado',   listKey:'si_no'},
+        {h:'no_vendible',  listKey:'si_no'},
+        {h:'oculto',       listKey:'si_no'},
+      ];
+      let dvXml=`<dataValidations count="${dvCols.length}">`;
+      dvCols.forEach(({h,listKey})=>{
+        const cl=hL(h);
+        const sqref=hRangeSq(cl,DATA_ROW_START,DATA_ROW_END);
+        // Use defined name — no sheet ref in formula1 needed
+        dvXml+=`<dataValidation type="list" allowBlank="1" showDropDown="0" `+
+          `showErrorMessage="1" errorStyle="warning" `+
+          `errorTitle="Valor no en lista" error="El valor no esta en la lista. Puedes continuar." `+
+          `sqref="${sqref}"><formula1>_list_${listKey}</formula1></dataValidation>`;
+      });
+      dvXml+='</dataValidations>';
+
+      // Remove any existing empty dataValidations or conditionalFormatting
+      shXml=shXml.replace(/<dataValidations[^/]*\/>/g,'');
+      shXml=shXml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/g,'');
+      shXml=shXml.replace(/<conditionalFormatting[\s\S]*?<\/conditionalFormatting>/g,'');
+
+      // OOXML strict order: CF must come before dataValidations
+      // Insert both before </worksheet>
+      shXml=shXml.replace('</worksheet>',cfXml+dvXml+'</worksheet>');
+      zip.file('xl/worksheets/sheet1.xml',shXml);
+
+      // ── 4. Generate and download ──────────────────────────────────────────
+      const blob=await zip.generateAsync({
+        type:'blob',
+        mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        compression:'DEFLATE'
+      });
       const a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
       a.download='plantilla_aura_de_oriente.xlsx';
       a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),60000);
       toastMsg('Plantilla descargada','ok');
+
     }catch(err){
-      console.error('Template error:',err);
-      // Fallback: download without XML patches
+      console.error('Template XML patch error:',err);
+      // Fallback: plain xlsx without validations
       XLSX.writeFile(wb,'plantilla_aura_de_oriente.xlsx');
-      toastMsg('Plantilla descargada (sin validaciones — '+err.message+')','ok');
+      toastMsg('Plantilla descargada (sin validaciones)','ok');
     }
   })();
 }
-
 let xlPending=[];
 function handleXL(e){
   const file=e.target.files[0];if(!file)return;
