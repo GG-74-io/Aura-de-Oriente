@@ -1336,7 +1336,7 @@ async function gFetch(params,body){
 async function testConnection(){
   if(!SCRIPT_URL){syncMsg('Primero guarda la URL','err');return;}
   syncMsg('Probando conexion...','');
-  try{const d=await gFetch({action:'ping'});setSyncStatus('ok');syncMsg('Conexion exitosa — '+(d.ts||''),'ok');}
+  try{const d=await gFetch(null,{action:'ping'});setSyncStatus('ok');syncMsg('Conexion exitosa — '+(d.ts||''),'ok');}
   catch(e){setSyncStatus('error');syncMsg('Error: '+e.message,'err');}
 }
 
@@ -1358,14 +1358,14 @@ async function loadFromGoogle(){
   if(!SCRIPT_URL){toastMsg('Configura la URL primero','err');return;}
   syncMsg('Cargando datos desde Google...','');setSyncStatus('syncing');
   try{
-    const d=await gFetch({action:'load'});
+    const d=await gFetch(null,{action:'load'});
     if(!d)throw new Error('Sin respuesta');
-    if(d.productos&&d.productos.length)  DB.products  =d.productos.map(normalizeProduct);
-    if(d.inventario&&d.inventario.length)DB.inventory =d.inventario.map(normalizeInv);
-    if(d.ventas&&d.ventas.length)        DB.sales     =d.ventas.map(normalizeVenta);
-    if(d.clientes&&d.clientes.length)    DB.clients   =d.clientes;
-    if(d.proveedores&&d.proveedores.length)DB.providers=d.proveedores.map(normalizeProv);
-    if(d.compras&&d.compras.length)      DB.purchases =d.compras.map(normalizeCompra);
+    if('productos'  in d) DB.products  =(d.productos ||[]).map(normalizeProduct);
+    if('inventario' in d) DB.inventory =(d.inventario||[]).map(normalizeInv);
+    if('ventas'     in d) DB.sales     =(d.ventas    ||[]).map(normalizeVenta);
+    if('clientes'   in d) DB.clients   = d.clientes  ||[];
+    if('proveedores'in d) DB.providers =(d.proveedores||[]).map(normalizeProv);
+    if('compras'    in d) DB.purchases =(d.compras   ||[]).map(normalizeCompra);
     if(d.paquetes&&d.paquetes.length)    DB.packages  =d.paquetes.map(normalizePkg);
     if(d.pagos_prov&&d.pagos_prov.length)DB.payments_prov=d.pagos_prov;
     if(d.listas_columnar&&Object.keys(d.listas_columnar).length){
@@ -1409,13 +1409,13 @@ let _lastPollHash='';
 setInterval(async()=>{
   if(!SCRIPT_URL)return;
   try{
-    const d=await gFetch({action:'ping'});
+    const d=await gFetch(null,{action:'ping'});
     const h=d&&d.last_modified?String(d.last_modified):'';
     if(h&&h!==_lastPollHash&&_lastPollHash!==''){
       _lastPollHash=h;
       // Silently reload
       setSyncStatus('syncing');
-      const data=await gFetch({action:'load'});
+      const data=await gFetch(null,{action:'load'});
       if(data){
         if(data.productos&&data.productos.length)DB.products=data.productos.map(normalizeProduct);
         if(data.inventario&&data.inventario.length)DB.inventory=data.inventario.map(normalizeInv);
@@ -3382,7 +3382,7 @@ async function importAllData(e){
 async function debugSheetHeaders(){
   if(!SCRIPT_URL){toastMsg('Configura la URL primero','err');return;}
   try{
-    const d=await gFetch({action:'debug_headers'});
+    const d=await gFetch(null,{action:'debug_headers'});
     const prod=d['productos']||[];
     const hasImgId=Array.isArray(prod)&&prod.includes('img_id');
     const hasImgUrl=Array.isArray(prod)&&prod.includes('img_url');
@@ -3420,7 +3420,7 @@ function populateInvFilters(){
     if(p){arr(p.familia).forEach(f=>fset.add(f));if(p.imarca)iset.add(p.imarca);arr(p.uso).forEach(u=>uset.add(u));}
   });
   const fill=(id,set,lbl)=>{const el=$$(id);if(!el)return;el.innerHTML='<option value="">'+lbl+'</option>'+[...set].sort().map(v=>'<option>'+v+'</option>').join('');};
-  fill('iv-marca',mset,'Marca árabe');fill('iv-familia',fset,'Familia');fill('iv-inspo',iset,'Inspiración');fill('iv-uso',uset,'Uso');
+  fill('iv-marca',mset,'Marca árabe');fill('iv-uso',uset,'Uso');
 }
 function renderInv(){
   populateInvFilters();
@@ -4066,7 +4066,7 @@ async function saveVenta(){
     const venta={id:NID++,fecha:cv('v-fecha')||TODAY,cliente:cli.nombre,clienteId:cliId,
       producto:pkg.nombre,invId:null,pkgId,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:true,observaciones:obs,
-      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real'}]:[],pkgProds:pkg.prods,ajustes:[]};
+      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real',forma:''}]:[],pkgProds:pkg.prods,ajustes:[]};
     pkg.prods.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);if(inv)inv.comprometidas=(inv.comprometidas||0)+(pp.uds||1)*uds;});
     DB.sales.push(venta);
   }else{
@@ -4077,7 +4077,7 @@ async function saveVenta(){
       tipoProd:inv.tipo||'',presProd:inv.pres||'',marcaProd:arr(inv.marca)[0]||inv.marca||'',
       invId,pkgId:null,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:false,observaciones:obs,
-      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real'}]:[],pkgProds:[],ajustes:[]});
+      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real',forma:''}]:[],pkgProds:[],ajustes:[]});
     inv.comprometidas=(inv.comprometidas||0)+uds;
   }
   syncClientBalances();saveDB();
