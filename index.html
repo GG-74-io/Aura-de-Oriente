@@ -218,6 +218,7 @@ tbody tr:hover td{background:var(--surf2)}
 /* ── RESPONSIVE ── */
 @media(max-width:580px){.f2,.f3{grid-template-columns:1fr}.pgrid{grid-template-columns:1fr 1fr}.sc-row{grid-template-columns:1fr 1fr}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -422,12 +423,11 @@ tbody tr:hover td{background:var(--surf2)}
         <div class="sc sc-ok"><div class="sc-l">Existencia</div><div class="sc-v" id="iv-e">0</div></div>
       </div>
       <div class="fbar" style="margin-bottom:10px"><div class="fbar-r">
-          <input id="iv-q" type="text" placeholder="Buscar producto o marca..." oninput="renderInv()" style="flex:2">
+          <input id="iv-q" type="text" placeholder="Buscar producto, marca, tipo..." oninput="renderInv()" style="flex:2">
+          <select id="iv-prod" onchange="renderInv()"><option value="">Producto</option></select>
           <select id="iv-marca" onchange="renderInv()"><option value="">Marca árabe</option></select>
-          <select id="iv-genero" onchange="renderInv()"><option value="">Género</option><option>Mujer</option><option>Hombre</option><option>Unisex</option></select>
-          <select id="iv-familia" onchange="renderInv()"><option value="">Familia</option></select>
-          <select id="iv-inspo" onchange="renderInv()"><option value="">Inspiración</option></select>
-          <select id="iv-uso" onchange="renderInv()"><option value="">Uso</option></select>
+          <select id="iv-tipo" onchange="renderInv()"><option value="">Tipo</option></select>
+          <select id="iv-pres" onchange="renderInv()"><option value="">Presentación</option></select>
           <select id="iv-estado" onchange="renderInv()"><option value="">Todo el stock</option><option value="disponible">Con existencia</option><option value="consig">Consignación</option><option value="sinstock">Sin stock</option></select>
           <button class="btn btn-outline btn-sm" onclick="clearInvFiltros()">Limpiar</button>
         </div></div>
@@ -441,9 +441,7 @@ tbody tr:hover td{background:var(--surf2)}
           <th onclick="srt('inv-tbl',5)">Consig.</th>
           <th onclick="srt('inv-tbl',6)">Comprom.</th>
           <th onclick="srt('inv-tbl',7)">Existencia</th>
-          <th onclick="srt('inv-tbl',8)">Costo</th>
-          <th onclick="srt('inv-tbl',9)">P.Venta</th>
-          <th onclick="srt('inv-tbl',10)">Margen</th>
+          <th onclick="srt('inv-tbl',8)">P.Venta</th>
           <th>Acciones</th>
         </tr></thead>
         <tbody id="inv-tbody"></tbody>
@@ -518,13 +516,15 @@ tbody tr:hover td{background:var(--surf2)}
           <th onclick="srt('v-tbl',0)">Fecha</th>
           <th onclick="srt('v-tbl',1)">Cliente</th>
           <th onclick="srt('v-tbl',2)">Producto</th>
-          <th onclick="srt('v-tbl',3)">Uds</th>
-          <th onclick="srt('v-tbl',4)">Total</th>
-          <th onclick="srt('v-tbl',5)">Cobrado</th>
-          <th onclick="srt('v-tbl',6)">Saldo</th>
-          <th onclick="srt('v-tbl',7)">Entregadas</th>
-          <th onclick="srt('v-tbl',8)">Pr&oacute;x.Pago</th>
-          <th onclick="srt('v-tbl',9)">Estado</th>
+          <th onclick="srt('v-tbl',3)">Tipo</th>
+          <th onclick="srt('v-tbl',4)">Pres.</th>
+          <th onclick="srt('v-tbl',5)">Uds</th>
+          <th onclick="srt('v-tbl',6)">Total</th>
+          <th onclick="srt('v-tbl',7)">Cobrado</th>
+          <th onclick="srt('v-tbl',8)">Saldo</th>
+          <th onclick="srt('v-tbl',9)">Entregadas</th>
+          <th onclick="srt('v-tbl',10)">Pr&oacute;x.Pago</th>
+          <th onclick="srt('v-tbl',11)">Estado</th>
           <th>Acciones</th>
         </tr></thead>
         <tbody id="v-tbody"></tbody>
@@ -538,27 +538,38 @@ tbody tr:hover td{background:var(--surf2)}
         <div class="fbar-r" style="margin-bottom:8px">
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;padding-bottom:3px">
           <div class="seg" style="flex-wrap:nowrap;width:max-content">
-            <button class="seg-btn active" onclick="setReporte('compras',this)">Compras</button>
+            <button class="seg-btn active" onclick="setReporte('resumen',this)">Resumen</button>
+            <button class="seg-btn" onclick="setReporte('compras',this)">Compras</button>
             <button class="seg-btn" onclick="setReporte('pagos-prov',this)">Pagos proveedor</button>
             <button class="seg-btn" onclick="setReporte('ventas',this)">Ventas</button>
             <button class="seg-btn" onclick="setReporte('pagos-cli',this)">Pagos cliente</button>
             <button class="seg-btn" onclick="setReporte('inventario',this)">Inventario</button>
-            <button class="seg-btn" onclick="setReporte('ranking',this)">Ranking clientes</button>
+            <button class="seg-btn" onclick="setReporte('ranking',this)">Rankings</button>
             <button class="seg-btn" onclick="setReporte('cobranza',this)">Proyecci&#243;n cobranza</button>
           </div></div>
         </div>
-        <div class="fbar-r">
-          <input type="date" id="r-desde" onchange="renderReporte()">
-          <input type="date" id="r-hasta" onchange="renderReporte()">
-          <select id="r-cliente" onchange="renderReporte()"><option value="">Todos los clientes</option></select>
-          <select id="r-proveedor" onchange="renderReporte()"><option value="">Todos los proveedores</option></select>
-          <select id="r-producto" onchange="renderReporte()"><option value="">Todos los productos</option></select>
-          <select id="r-stock" onchange="renderReporte()"><option value="">Propio y consig.</option><option value="propio">Solo propio</option><option value="consig">Solo consig.</option></select>
-          <button class="btn btn-outline btn-sm" onclick="exportReportExcel()">Excel</button>
+        <!-- Dynamic filter row — shown/hidden per report type -->
+        <div id="rep-filters" class="fbar-r" style="margin-top:6px;flex-wrap:wrap;gap:5px">
+          <input type="date" id="r-desde" onchange="renderReporte()" style="display:none">
+          <input type="date" id="r-hasta" onchange="renderReporte()" style="display:none">
+          <select id="r-cliente" onchange="renderReporte()" style="display:none"><option value="">Todos los clientes</option></select>
+          <select id="r-proveedor" onchange="renderReporte()" style="display:none"><option value="">Todos los proveedores</option></select>
+          <select id="r-producto" onchange="renderReporte()" style="display:none"><option value="">Todos los productos</option></select>
+          <select id="r-tipo-prod" onchange="renderReporte()" style="display:none"><option value="">Tipo producto</option></select>
+          <select id="r-pres-prod" onchange="renderReporte()" style="display:none"><option value="">Presentación</option></select>
+          <select id="r-marca-prod" onchange="renderReporte()" style="display:none"><option value="">Marca</option></select>
+          <select id="r-forma-pago" onchange="renderReporte()" style="display:none"><option value="">Forma de pago</option></select>
+          <select id="r-tipo-pago" onchange="renderReporte()" style="display:none"><option value="">Tipo de pago</option></select>
+          <select id="r-estado-compra" onchange="renderReporte()" style="display:none">
+            <option value="">Todos los estados</option><option value="pendiente">Pendiente</option><option value="recibido">Recibido</option>
+          </select>
+          <select id="r-estado-venta" onchange="renderReporte()" style="display:none">
+            <option value="">Todos los estados</option><option value="pagado">Pagado</option><option value="parcial">Parcial</option><option value="sinpago">Sin pagos</option>
+          </select>
         </div>
       </div>
-      <div id="reporte-stats" class="sc-row" style="margin-bottom:12px"></div>
-      <div id="rep-extra"></div>
+      <div id="reporte-stats" class="sc-row" style="flex-wrap:wrap;margin-bottom:10px"></div>
+<div id="rep-extra"></div>
       <div class="tw"><table id="rep-tbl"><thead id="rep-thead"></thead><tbody id="rep-tbody"></tbody></table></div>
     </div>
 
@@ -820,6 +831,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div class="mhdr"><h3>Registrar pago</h3><button class="mx" onclick="closeM('m-pago')">&#10005;</button></div>
   <input type="hidden" id="pago-vid">
   <div class="fg"><label>Monto ($)</label><input type="number" id="pago-monto" value="200"><div class="fn">Sugerido: <strong id="pago-sug">$200</strong></div></div>
+  <div class="fg"><label>Forma de pago *</label><select id="pago-forma"><option value="">-- Selecciona --</option></select></div>
   <div class="fg"><label>Fecha pr&#243;ximo pago</label><input type="date" id="pago-prox"></div>
   <div id="pago-cal-preview" style="margin:8px 0"></div>
   <div class="mfoot">
@@ -1077,7 +1089,8 @@ const DEFAULT_LISTS={
   proyecciones:['Muy cercana','Cercana','Moderada','Notable','Intensa','Bestial'],
   temporadas:['Primavera','Verano','Otoño','Invierno','Todo el año'],
   fuentes:['Oud Miraj','Fragrantica','Proveedor propio','Otro'],
-  intensidades:['Ligera','Media','Alta','Fuerte']
+  intensidades:['Ligera','Media','Alta','Fuerte'],
+  formas_pago:['Efectivo','Transferencia','Tarjeta']
 };
 function loadLists(){
   const s=localStorage.getItem('aura_lists');
@@ -1515,9 +1528,13 @@ function buildExportData(){
   const pagos_ventas=[];
   const historial_ventas=[];
   DB.sales.forEach(v=>{
+    const _invPV=DB.inventory.find(i=>i.id===v.invId);
+    const _tipoPV=v.tipoProd||(_invPV?_invPV.tipo:'')||'';
+    const _presPV=v.presProd||(_invPV?_invPV.pres:'')||'';
     (v.pagos||[]).forEach(p=>pagos_ventas.push({
       ventaId:v.id,cliente:v.cliente,producto:v.producto,
-      fecha:p.fecha,monto:p.monto,tipo:p.tipo||'real'
+      tipoProd:_tipoPV,presProd:_presPV,
+      fecha:p.fecha,monto:p.monto,tipo:p.tipo||'real',forma:p.forma||''
     }));
     (v.ajustes||[]).forEach(a=>historial_ventas.push({
       ventaId:v.id,cliente:v.cliente,producto:v.producto,
@@ -1563,14 +1580,22 @@ function buildExportData(){
       cprov:i.cprov||'',ccom:i.ccom||0,ccond:i.ccond||'',cvenc:i.cvenc||'',
       comprometidas:i.comprometidas||0
     })),
-    ventas:DB.sales.map(v=>({
-      id:v.id,fecha:v.fecha,cliente:v.cliente,clienteId:v.clienteId,
-      producto:v.producto,invId:v.invId||'',pkgId:v.pkgId||'',
-      uds:v.uds,utype:v.utype,precioU:v.precioU,descuento:v.descuento||0,
-      total:v.total,pagado:v.pagado,quinc:v.quinc||200,
-      prox:v.prox,entregadas:v.entregadas||0,esPaquete:v.esPaquete?'TRUE':'FALSE',
-      observaciones:v.observaciones||'',pkgProds:j(v.pkgProds||[])
-    })),
+    ventas:DB.sales.map(v=>{
+      // Derive tipo/pres/marca from inventory if not stored directly
+      const _inv=DB.inventory.find(i=>i.id===v.invId);
+      const _tipo=v.tipoProd||(_inv?_inv.tipo:'')||'';
+      const _pres=v.presProd||(_inv?_inv.pres:'')||'';
+      const _marca=v.marcaProd||(_inv?(arr(_inv.marca)[0]||_inv.marca):'')||'';
+      return {
+        id:v.id,fecha:v.fecha,cliente:v.cliente,clienteId:v.clienteId,
+        producto:v.producto,tipoProd:_tipo,presProd:_pres,marcaProd:_marca,
+        invId:v.invId||'',pkgId:v.pkgId||'',
+        uds:v.uds,utype:v.utype,precioU:v.precioU,descuento:v.descuento||0,
+        total:v.total,pagado:v.pagado,quinc:v.quinc||200,
+        prox:v.prox,entregadas:v.entregadas||0,esPaquete:v.esPaquete?'TRUE':'FALSE',
+        observaciones:v.observaciones||'',pkgProds:j(v.pkgProds||[])
+      };
+    }),
     clientes:DB.clients.map(c=>({id:c.id,nombre:c.nombre,tel:c.tel||'',ciudad:c.ciudad||'',notas:c.notas||'',compras:c.compras||0,saldo:c.saldo||0})),
     proveedores:DB.providers.map(p=>({
       id:p.id,nombre:p.nombre||'',tel:p.tel||'',concepto:p.concepto||'',
@@ -3162,6 +3187,7 @@ const ADMIN_KEYS=[
   {key:'temporadas',label:'Temporadas'},
   {key:'fuentes',label:'Fuente'},
   {key:'intensidades',label:'Intensidad'},
+  {key:'formas_pago',label:'Formas de pago'},
 ];
 function renderAdmin(){
   $$('admin-lists').innerHTML=ADMIN_KEYS.map(({key,label})=>`
@@ -3342,7 +3368,7 @@ function getComprometidas(invId){
          },0);
 }
 
-function clearInvFiltros(){sv('iv-q','');['iv-marca','iv-genero','iv-familia','iv-inspo','iv-uso','iv-estado'].forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});renderInv();}
+function clearInvFiltros(){sv('iv-q','');['iv-prod','iv-marca','iv-tipo','iv-pres','iv-estado'].forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});renderInv();}
 function populateInvFilters(){
   const mset=new Set(),fset=new Set(),iset=new Set(),uset=new Set();
   DB.inventory.forEach(i=>{
@@ -3355,17 +3381,18 @@ function populateInvFilters(){
 }
 function renderInv(){
   populateInvFilters();
-  const _q=($$('iv-q')?.value||'').toLowerCase(),_m=$$('iv-marca')?.value,_g=$$('iv-genero')?.value;
-  const _f=$$('iv-familia')?.value,_i=$$('iv-inspo')?.value,_u=$$('iv-uso')?.value,_e=$$('iv-estado')?.value;
+  const _q=($$('iv-q')?.value||'').toLowerCase();
+  const _pr=$$('iv-prod')?.value;
+  const _m=$$('iv-marca')?.value,_tp=$$('iv-tipo')?.value,_ps=$$('iv-pres')?.value,_e=$$('iv-estado')?.value;
   function _pass(i){
-    if(_q&&![i.nombre,i.marca||''].join(' ').toLowerCase().includes(_q))return false;
-    if(_m&&i.marca!==_m)return false;
+    if(_q&&![i.nombre,arr(i.marca)[0]||i.marca||'',i.tipo||'',i.pres||''].join(' ').toLowerCase().includes(_q))return false;
+    if(_pr&&i.nombre!==_pr)return false;
+    if(_m&&(arr(i.marca)[0]||i.marca||'')!==_m)return false;
+    if(_tp&&i.tipo!==_tp)return false;
+    if(_ps&&i.pres!==_ps)return false;
     if(_e==='disponible'&&getExistencia(i)<=0)return false;
     if(_e==='sinstock'&&getExistencia(i)>0)return false;
     if(_e==='consig'&&!i.consig)return false;
-    const p=DB.products.find(x=>x.id===i.pid);
-    if(p){if(_g&&p.genero!==_g)return false;if(_f&&!arr(p.familia).includes(_f))return false;
-    if(_i&&p.imarca!==_i)return false;if(_u&&!arr(p.uso).includes(_u))return false;}
     return true;
   }
   let vc=0,vv=0,prop=0,cons=0,comp=0,exist=0;
@@ -3386,16 +3413,14 @@ function renderInv(){
       <td>${i.cuds||0}${i.consig?`<span class="pill p-teal" style="font-size:9px;margin-left:3px">C</span>`:''}${vb}</td>
       <td style="color:${i.comprometidas>0?'var(--warn)':'inherit'}">${i.comprometidas}</td>
       <td style="font-weight:500;color:${ex<=0?'var(--err)':ex<=2?'var(--warn)':'var(--ok)'}">${ex}</td>
-      <td style="font-size:11px">${fmt$(i.costo)}</td>
       <td style="font-size:11px">${fmt$(i.precio)}</td>
-      <td style="font-size:11px;color:${mrg>=40?'var(--ok)':mrg>=20?'var(--warn)':'var(--err)'}">${mrg}%</td>
       <td style="white-space:nowrap">
         <button class="btn btn-outline btn-sm" onclick="editInv(${i.id})">&#9999;</button>
         ${(i.ajustes&&i.ajustes.length)?`<button class="btn btn-outline btn-sm" onclick="openHistorialInv(${i.id})" title="Historial">&#128203;</button>`:''}
       </td>
     </tr>`);
   });
-  $$('inv-tbody').innerHTML=rows.join('')||'<tr><td colspan="12"><div class="empty"><p>Sin inventario</p></div></td></tr>';
+  $$('inv-tbody').innerHTML=rows.join('')||'<tr><td colspan="10"><div class="empty"><p>Sin inventario</p></div></td></tr>';
   $$('iv-c').textContent=fmt$(vc);$$('iv-v').textContent=fmt$(vv);
   $$('iv-p').textContent=prop;$$('iv-k').textContent=cons;$$('iv-m').textContent=comp;$$('iv-e').textContent=exist;
 }
@@ -3859,8 +3884,9 @@ function renderVentas(){
   const fEstado=cv('vf-estado'),fDesde=cv('vf-desde'),fHasta=cv('vf-hasta'),fSel=cv('v-filtro-sel');
   let list=DB.sales.filter(v=>{
     if(fEstado){const p=v.total-v.pagado;if(fEstado==='pagado'&&p!==0)return false;if(fEstado==='parcial'&&!(p>0&&p<v.total))return false;if(fEstado==='sinpagos'&&p!==v.total)return false;}
-    if(fDesde&&v.fecha<fDesde)return false;
-    if(fHasta&&v.fecha>fHasta)return false;
+    const _vISO2=dateToISO(v.fecha)||'';
+    if(fDesde&&_vISO2<fDesde)return false;
+    if(fHasta&&_vISO2>fHasta)return false;
     if(vistaV==='cliente'&&fSel&&v.cliente!==fSel)return false;
     if(vistaV==='producto'&&fSel){const inv=DB.inventory.find(i=>i.id===v.invId);const label=inv?inv.nombre+' '+inv.tipo+' '+inv.pres:'';if(label!==fSel)return false;}
     return true;
@@ -3873,7 +3899,7 @@ function renderVentas(){
   if(vistaV!=='todas'){
     const groups={};list.forEach(v=>{const k=vistaV==='cliente'?v.cliente:v.producto;if(!groups[k])groups[k]=[];groups[k].push(v);});
     Object.entries(groups).forEach(([k,rows])=>{const gt=rows.reduce((a,r)=>a+r.total,0),gc=rows.reduce((a,r)=>a+r.pagado,0);html+=`<tr class="g-hdr"><td colspan="11">${k} — Total: ${fmt$(gt)} · Cobrado: ${fmt$(gc)} · Saldo: ${fmt$(gt-gc)}</td></tr>`;rows.forEach(v=>html+=vRow(v));});
-  }else{list.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(v=>html+=vRow(v));}
+  }else{list.slice().sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||'')).forEach(v=>html+=vRow(v));}
   tbody.innerHTML=html;
 }
 
@@ -3887,6 +3913,8 @@ function vRow(v){
     <td style="font-size:11px;color:var(--mist)">${fmtDate(v.fecha)}</td>
     <td style="font-weight:500">${v.cliente}</td>
     <td style="font-size:12px">${v.esPaquete?'[Paq] ':''} ${v.producto}${v.observaciones?`<div style="font-size:10px;color:var(--mist)">${v.observaciones}</div>`:''}</td>
+    <td style="font-size:11px">${v.tipoProd||(()=>{const _i=DB.inventory.find(i=>i.id===v.invId);return _i?_i.tipo:'';})()}</td>
+    <td style="font-size:11px">${v.presProd||(()=>{const _i=DB.inventory.find(i=>i.id===v.invId);return _i?_i.pres:'';})()}</td>
     <td>${v.uds}</td>
     <td>${fmt$(v.total)}</td>
     <td style="color:var(--ok)">${fmt$(v.pagado)}</td>
@@ -4002,7 +4030,9 @@ async function saveVenta(){
     const invId=parseInt(prodSel.split(':')[1]);const inv=DB.inventory.find(i=>i.id===invId);
     if(!inv||getExistencia(inv)<uds){toastMsg('Sin existencia suficiente','err');return;}
     DB.sales.push({id:NID++,fecha:cv('v-fecha')||TODAY,cliente:cli.nombre,clienteId:cliId,
-      producto:inv.nombre+' '+inv.tipo+' '+inv.pres,invId,pkgId:null,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
+      producto:inv.nombre+' '+inv.tipo+' '+inv.pres,
+      tipoProd:inv.tipo||'',presProd:inv.pres||'',marcaProd:arr(inv.marca)[0]||inv.marca||'',
+      invId,pkgId:null,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:false,observaciones:obs,
       pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real'}]:[],pkgProds:[],ajustes:[]});
     inv.comprometidas=(inv.comprometidas||0)+uds;
@@ -4035,6 +4065,9 @@ function abrirPago(id){
   const ps=$$('pago-sug');if(ps)ps.textContent=fmt$(v.quinc||200);
   const _nd=new Date();_nd.setDate(_nd.getDate()+15);
   const pp=$$('pago-prox');if(pp){pp.value=_nd.toISOString().split('T')[0];pp.oninput=renderPagoCalPreview;}
+  const _pf=$$('pago-forma');
+  if(_pf)_pf.innerHTML='<option value="">-- Forma de pago --</option>'
+    +(LISTS.formas_pago||['Efectivo','Transferencia']).map(f=>`<option>${f}</option>`).join('');
   openM('m-pago');setTimeout(renderPagoCalPreview,50);
 }
 async function confirmarPago(){
@@ -4043,8 +4076,10 @@ async function confirmarPago(){
   if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const id=parseInt(cv('pago-vid'));const v=DB.sales.find(x=>x.id===id);
   const m=parseFloat(($$('pago-monto')||{}).value)||0;if(m<=0){toastMsg('Monto inv\u00e1lido','err');return;}
+  const _frmPago=($$('pago-forma')?.value||'').trim();
+  if(!_frmPago){toastMsg('Selecciona la forma de pago','err');return;}
   const ap=Math.min(m,v.total-v.pagado);v.pagado+=ap;
-  if(!v.pagos)v.pagos=[];v.pagos.push({fecha:TODAY,monto:ap,tipo:'real'});
+  if(!v.pagos)v.pagos=[];v.pagos.push({fecha:TODAY,monto:ap,tipo:'real',forma:_frmPago});
   const _sr=v.total-v.pagado;
   if(_sr<=0){v.prox='-';v.plan_pagos=[];}
   else{const _px=$$('pago-prox')?.value||TODAY_ISO;v.prox=normalizeDate(_px);
@@ -4203,11 +4238,12 @@ function openPagosVenta(id){
     +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pagos registrados</div>'
     +'<div style="overflow-x:auto;overflow-y:auto;max-height:50vh">'
     +(!pagos.length?'<div class="empty"><p>Sin pagos</p></div>'
-      :'<table><thead><tr><th>Fecha</th><th style="text-align:right">Monto</th><th>Tipo</th></tr></thead><tbody>'
+      :'<table><thead><tr><th>Fecha</th><th style=\'text-align:right\'>Monto</th><th>Tipo</th><th>Forma</th></tr></thead><tbody>'
       +pagos.slice().reverse().map(p=>'<tr>'
         +'<td style="font-size:11px">'+fmtDate(p.fecha)+'</td>'
         +'<td style="text-align:right;font-weight:500;color:var(--ok)">'+fmt$(p.monto)+'</td>'
         +'<td><span class="tag">'+(p.tipo||'real')+'</span></td>'
+        +'<td style="font-size:11px">'+(p.forma||'—')+'</td>'
         +'</tr>').join('')+'</tbody></table>')
     +'</div><div class="mfoot"><button class="btn btn-outline" onclick="closeM(\'m-inv-det\')">Cerrar</button></div></div>';
   $$('m-inv-det').innerHTML=html;openM('m-inv-det');
@@ -4726,13 +4762,13 @@ async function deletePkg(id){
 // ═══════════════════════════════════════════════════════════
 let curReporte='compras';
 function initReporte(){
-  // Fill selects
-  const rc=$$('r-cliente');rc.innerHTML='<option value="">Todos los clientes</option>'+DB.clients.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-  const rp=$$('r-proveedor');rp.innerHTML='<option value="">Todos los proveedores</option>'+DB.providers.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
-  const rprod=$$('r-producto');rprod.innerHTML='<option value="">Todos los productos</option>'+[...new Set(DB.sales.map(v=>v.producto))].sort().map(x=>`<option value="${x}">${x}</option>`).join('');
-  // Default dates: last 30 days
-  if(!cv('r-desde'))sv('r-desde',isoOffsetISO(-30));
-  if(!cv('r-hasta'))sv('r-hasta',TODAY_ISO);
+  // Always start with Resumen
+  curReporte='resumen';
+  // Activate Resumen button in menu
+  document.querySelectorAll('#s-reportes .seg-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.trim()==='Resumen');
+  });
+  updateReportFilters('resumen');
   renderReporte();
 }
 
@@ -4740,13 +4776,78 @@ function setReporte(tipo,btn){
   curReporte=tipo;
   document.querySelectorAll('#s-reportes .seg-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  updateReportFilters(tipo);
   renderReporte();
 }
+function updateReportFilters(tipo){
+  const ALL=['r-desde','r-hasta','r-cliente','r-proveedor','r-producto',
+    'r-tipo-prod','r-pres-prod','r-marca-prod','r-forma-pago','r-tipo-pago',
+    'r-estado-compra','r-estado-venta'];
+  ALL.forEach(id=>{const e=$$(id);if(e)e.style.display='none';});
+  const show=(...ids)=>ids.forEach(id=>{const e=$$(id);if(e)e.style.display='';});
+  if(tipo==='compras')    show('r-desde','r-hasta','r-proveedor','r-producto','r-tipo-prod','r-pres-prod','r-estado-compra');
+  if(tipo==='pagos-prov') show('r-desde','r-hasta','r-proveedor','r-producto','r-marca-prod','r-tipo-prod','r-tipo-pago','r-pres-prod');
+  if(tipo==='ventas')     show('r-desde','r-hasta','r-cliente','r-producto','r-tipo-prod','r-pres-prod','r-estado-venta');
+  if(tipo==='pagos-cli')  show('r-desde','r-hasta','r-cliente','r-producto','r-tipo-prod','r-pres-prod','r-forma-pago','r-estado-venta');
+  if(tipo==='inventario') show('r-producto','r-marca-prod','r-tipo-prod','r-pres-prod');
+  if(tipo==='cobranza')   show('r-desde','r-hasta','r-cliente','r-producto','r-tipo-prod','r-pres-prod','r-estado-venta');
+  const rc=$$('r-cliente');
+  if(rc)rc.innerHTML='<option value="">Todos los clientes</option>'
+    +DB.clients.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const rprov=$$('r-proveedor');
+  if(rprov)rprov.innerHTML='<option value="">Todos los proveedores</option>'
+    +DB.providers.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  const rprod=$$('r-producto');
+  if(rprod){
+    let _pnames=[];
+    if(tipo==='compras'||tipo==='pagos-prov') _pnames=[...new Set(DB.purchases.map(c=>c.producto).filter(Boolean))].sort();
+    else if(tipo==='inventario') _pnames=[...new Set(DB.inventory.map(i=>i.nombre).filter(Boolean))].sort();
+    else _pnames=[...new Set(DB.sales.map(v=>v.producto).filter(Boolean))].sort();
+    rprod.innerHTML='<option value="">Todos los productos</option>'+_pnames.map(n=>`<option>${n}</option>`).join('');
+  }
+  const rtipo=$$('r-tipo-prod');
+  if(rtipo){
+    let _tipos=[];
+    if(tipo==='inventario') _tipos=[...new Set(DB.inventory.map(i=>i.tipo).filter(Boolean))].sort();
+    else if(tipo==='compras'||tipo==='pagos-prov') _tipos=[...new Set(DB.purchases.map(c=>c.tipo).filter(Boolean))].sort();
+    else _tipos=[...new Set(DB.sales.map(v=>v.tipoProd||(DB.inventory.find(i=>i.id===v.invId)||{tipo:''}).tipo||'').filter(Boolean))].sort();
+    rtipo.innerHTML='<option value="">Tipo producto</option>'+_tipos.map(t=>`<option>${t}</option>`).join('');
+  }
+  const rpres=$$('r-pres-prod');
+  if(rpres){
+    let _pres=[];
+    if(tipo==='inventario') _pres=[...new Set(DB.inventory.map(i=>i.pres).filter(Boolean))].sort();
+    else if(tipo==='compras'||tipo==='pagos-prov') _pres=[...new Set(DB.purchases.map(c=>c.pres).filter(Boolean))].sort();
+    else _pres=[...new Set(DB.sales.map(v=>v.presProd||(DB.inventory.find(i=>i.id===v.invId)||{pres:''}).pres||'').filter(Boolean))].sort();
+    rpres.innerHTML='<option value="">Presentación</option>'+_pres.map(pr=>`<option>${pr}</option>`).join('');
+  }
+  const rmarca=$$('r-marca-prod');
+  if(rmarca){
+    let _marcas=[];
+    if(tipo==='inventario') _marcas=[...new Set(DB.inventory.map(i=>arr(i.marca)[0]||i.marca||'').filter(Boolean))].sort();
+    else _marcas=[...new Set(DB.providers.map(p=>p.nombre).filter(Boolean))].sort();
+    rmarca.innerHTML='<option value="">Marca</option>'+_marcas.map(m=>`<option>${m}</option>`).join('');
+  }
+  const rforma=$$('r-forma-pago');
+  if(rforma)rforma.innerHTML='<option value="">Forma de pago</option>'
+    +(LISTS.formas_pago||[]).map(f=>`<option>${f}</option>`).join('');
+  const rtpago=$$('r-tipo-pago');
+  if(rtpago)rtpago.innerHTML='<option value="">Tipo de pago</option>'
+    +['abono','compra_recibida'].map(t=>`<option>${t}</option>`).join('');
+}
+
+
+
+
+
 
 function renderReporte(){
   const desde=cv('r-desde'),hasta=cv('r-hasta');
   const cliId=parseInt(cv('r-cliente'))||0,provId=parseInt(cv('r-proveedor'))||0;
-  const prodFilt=cv('r-producto'),stockFilt=cv('r-stock');
+  const prodFilt=cv('r-producto');
+  const tipoProdFilt=cv('r-tipo-prod'),presProdFilt=cv('r-pres-prod'),marcaProdFilt=cv('r-marca-prod');
+  const formaPagoFilt=cv('r-forma-pago'),tipoPagoFilt=cv('r-tipo-pago');
+  const estadoCompra=cv('r-estado-compra'),estadoVenta=cv('r-estado-venta');
   const thead=$$('rep-thead'),tbody=$$('rep-tbody'),stats=$$('reporte-stats'),extra=$$('rep-extra');
   extra.innerHTML='';
 
@@ -4754,7 +4855,12 @@ function renderReporte(){
     let list=DB.purchases.filter(c=>{
       if(desde&&(dateToISO(c.fecha)||c.fecha)<desde)return false;
       if(hasta&&(dateToISO(c.fecha)||c.fecha)>hasta)return false;
-      if(provId&&c.provId!==provId)return false;return true;
+      if(provId&&c.provId!==provId)return false;
+      if(prodFilt&&!c.producto?.includes(prodFilt))return false;
+      if(tipoProdFilt&&c.tipo!==tipoProdFilt)return false;
+      if(presProdFilt&&c.pres!==presProdFilt)return false;
+      if(estadoCompra&&c.estado!==estadoCompra)return false;
+      return true;
     });
     list=[...list].sort((a,b)=>(dateToISO(b.fecha)||b.fecha||'').localeCompare(dateToISO(a.fecha)||a.fecha||''));
     const totP=list.reduce((a,c)=>a+c.total,0);const rec=list.filter(c=>c.estado==='recibido').length;
@@ -4801,39 +4907,61 @@ function renderReporte(){
       +'<tbody>'+_provResumen+'</tbody></table></div></div>';
     thead.innerHTML='<tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Tipo</th><th>Motivo</th></tr>';
     // Last 10: combine received purchases + historial_prov abonos, sorted desc
-    const _rcv=(DB.purchases||[]).filter(c=>c.estado==='recibido'&&(!provId||c.provId===provId))
-      .map(c=>({fecha:c.fechaRec||c.fecha,nombre:c.proveedor||'',monto:c.total,tipo:'compra_recibida',motivo:c.producto+' x'+(c.udsRecibidas||c.uds)}));
-    const _abn=DB.providers.filter(pv=>!provId||pv.id===provId)
-      .flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono').map(h=>({fecha:h.fecha,nombre:pv.nombre,monto:h.monto,tipo:'abono',motivo:h.motivo||''})));
+    const _rcv=(DB.purchases||[]).filter(c=>{
+      if(c.estado!=='recibido')return false;
+      if(provId&&c.provId!==provId)return false;
+      if(prodFilt&&!c.producto?.includes(prodFilt))return false;
+      if(tipoProdFilt&&c.tipo!==tipoProdFilt)return false;
+      if(presProdFilt&&c.pres!==presProdFilt)return false;
+      if(marcaProdFilt&&(DB.providers.find(p=>p.id===c.provId)?.nombre||'')!==marcaProdFilt)return false;
+      if(tipoPagoFilt&&tipoPagoFilt!=='compra_recibida')return false;
+      return true;
+    }).map(c=>({fecha:c.fechaRec||c.fecha,nombre:c.proveedor||'',monto:c.total,
+      tipo:'compra_recibida',tipoProd:c.tipo||'',presProd:c.pres||'',motivo:c.producto+' x'+(c.udsRecibidas||c.uds)}));
+    const _abn=DB.providers.filter(pv=>{
+      if(provId&&pv.id!==provId)return false;
+      if(marcaProdFilt&&pv.nombre!==marcaProdFilt)return false;
+      if(tipoPagoFilt&&tipoPagoFilt!=='abono')return false;
+      return true;
+    }).flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono').map(h=>({fecha:h.fecha,nombre:pv.nombre,monto:h.monto,tipo:'abono',tipoProd:'',presProd:'',motivo:h.motivo||''})));
     const _all10=[..._rcv,..._abn]
       .filter(r=>(!desde||dateToISO(r.fecha)>=desde)&&(!hasta||dateToISO(r.fecha)<=hasta))
-      .sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||'')).slice(0,10);
-    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Detalle</th></tr>';
+      .sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||'')).slice(0,50);
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo prod.</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Detalle</th></tr>';
     tbody.innerHTML=_all10.map(r=>`<tr>
       <td style="font-size:11px">${fmtDate(r.fecha)}</td>
       <td style="font-weight:500">${r.nombre||'&mdash;'}</td>
       <td><span class="tag">${r.tipo}</span></td>
+      <td style="font-size:11px">${r.tipoProd||'&mdash;'}</td>
+      <td style="font-size:11px">${r.presProd||'&mdash;'}</td>
       <td style="text-align:right;color:${r.tipo==='abono'?'var(--ok)':'var(--err)'}">${r.tipo==='abono'?'-':'+'} ${fmt$(Math.abs(r.monto||0))}</td>
       <td style="font-size:11px;color:var(--mist)">${r.motivo}</td>
     </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>Sin movimientos</p></div></td></tr>';
   }
   else if(curReporte==='ventas'){
     let list=DB.sales.filter(v=>{
-      if(desde&&v.fecha<desde)return false;if(hasta&&v.fecha>hasta)return false;
+      const _vISO=dateToISO(v.fecha)||'';
+      if(desde&&_vISO<desde)return false;if(hasta&&_vISO>hasta)return false;
       if(cliId&&v.clienteId!==cliId)return false;
-      if(prodFilt&&v.producto!==prodFilt)return false;
-      if(stockFilt&&v.utype!==stockFilt)return false;
+      if(prodFilt&&!(v.producto||'').includes(prodFilt))return false;
+      if(tipoProdFilt&&(v.tipoProd||(DB.inventory.find(i=>i.id===v.invId)?.tipo)||'')!==tipoProdFilt)return false;
+      if(presProdFilt&&(v.presProd||(DB.inventory.find(i=>i.id===v.invId)?.pres)||'')!==presProdFilt)return false;
+      if(estadoVenta){const _p2=v.total-v.pagado;if(estadoVenta==='pagado'&&_p2!==0)return false;if(estadoVenta==='parcial'&&!(_p2>0&&_p2<v.total))return false;if(estadoVenta==='sinpago'&&_p2!==v.total)return false;}
       return true;
     });
+    list=[...list].sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||''));
     const totV=list.reduce((a,v)=>a+v.total,0),cobV=list.reduce((a,v)=>a+v.pagado,0);
     stats.innerHTML=`<div class="sc"><div class="sc-l">Ventas</div><div class="sc-v">${list.length}</div></div>
       <div class="sc"><div class="sc-l">Total vendido</div><div class="sc-v" style="font-size:14px">${fmt$(totV)}</div></div>
       <div class="sc sc-ok"><div class="sc-l">Cobrado</div><div class="sc-v" style="font-size:14px">${fmt$(cobV)}</div></div>
       <div class="sc sc-err"><div class="sc-l">Saldo</div><div class="sc-v" style="font-size:14px">${fmt$(totV-cobV)}</div></div>`;
     list=[...list].sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||''));
-    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Uds</th><th onclick="srtTbl(this)" style="cursor:pointer">Total</th><th onclick="srtTbl(this)" style="cursor:pointer">Cobrado</th><th onclick="srtTbl(this)" style="cursor:pointer">Saldo</th><th onclick="srtTbl(this)" style="cursor:pointer">Estado</th><th onclick="srtTbl(this)" style="cursor:pointer">Obs.</th></tr>';
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer">Uds</th><th onclick="srtTbl(this)" style="cursor:pointer">Total</th><th onclick="srtTbl(this)" style="cursor:pointer">Cobrado</th><th onclick="srtTbl(this)" style="cursor:pointer">Saldo</th><th onclick="srtTbl(this)" style="cursor:pointer">Estado</th><th onclick="srtTbl(this)" style="cursor:pointer">Obs.</th></tr>';
     tbody.innerHTML=list.map(v=>{const p=v.total-v.pagado;return `<tr>
-      <td>${fmtDate(v.fecha)}</td><td>${v.cliente}</td><td>${v.producto}</td><td>${v.uds}</td>
+      <td>${fmtDate(v.fecha)}</td><td>${v.cliente}</td><td>${v.producto}</td>
+      <td style="font-size:11px">${v.tipoProd||(DB.inventory.find(i=>i.id===v.invId)?.tipo)||'&mdash;'}</td>
+      <td style="font-size:11px">${v.presProd||(DB.inventory.find(i=>i.id===v.invId)?.pres)||'&mdash;'}</td>
+      <td>${v.uds}</td>
       <td>${fmt$(v.total)}</td><td style="color:var(--ok)">${fmt$(v.pagado)}</td>
       <td style="color:${p>0?'var(--err)':'var(--ok)'}">${fmt$(p)}</td>
       <td>${p===0?'<span class="pill p-ok">Pagado</span>':p===v.total?'<span class="pill p-err">Sin pagos</span>':'<span class="pill p-warn">Parcial</span>'}</td>
@@ -4842,7 +4970,22 @@ function renderReporte(){
   }
   else if(curReporte==='pagos-cli'){
     const allPagos=[];
-    DB.sales.forEach(v=>{(v.pagos||[]).forEach(p=>{if((!desde||dateToISO(p.fecha)>=desde)&&(!hasta||dateToISO(p.fecha)<=hasta)&&(!cliId||v.clienteId===cliId))allPagos.push({...p,cliente:v.cliente,clienteId:v.clienteId,producto:v.producto});});});
+    DB.sales.forEach(v=>{
+      const _invA=DB.inventory.find(i=>i.id===v.invId);
+      const _tA=v.tipoProd||(_invA?_invA.tipo:'')||'';
+      const _pA=v.presProd||(_invA?_invA.pres:'')||'';
+      (v.pagos||[]).forEach(p=>{
+        const _okFecha=(!desde||dateToISO(p.fecha)>=desde)&&(!hasta||dateToISO(p.fecha)<=hasta);
+        const _okCli=!cliId||v.clienteId===cliId;
+        const _okProd=!prodFilt||v.producto?.includes(prodFilt);
+        const _okTipo=!tipoProdFilt||_tA===tipoProdFilt;
+        const _okPres=!presProdFilt||_pA===presProdFilt;
+        const _okForma=!formaPagoFilt||(p.forma||'')===formaPagoFilt;
+        const _okEst=!estadoVenta||(()=>{const _pv=v.total-v.pagado;return estadoVenta==='pagado'&&_pv===0||estadoVenta==='parcial'&&_pv>0&&_pv<v.total||estadoVenta==='sinpago'&&_pv===v.total;})();
+        if(_okFecha&&_okCli&&_okProd&&_okTipo&&_okPres&&_okForma&&_okEst)
+          allPagos.push({...p,cliente:v.cliente,clienteId:v.clienteId,producto:v.producto,tipoProd:_tA,presProd:_pA});
+      });
+    });
     allPagos.sort((a,b)=>b.fecha.localeCompare(a.fecha));
     // Totals
     const _totalVendido=DB.sales.filter(v=>!cliId||v.clienteId===cliId).reduce((a,v)=>a+v.total,0);
@@ -4853,40 +4996,78 @@ function renderReporte(){
       <div class="sc sc-ok"><div class="sc-l">Total cobrado</div><div class="sc-v" style="font-size:14px">${fmt$(_totalCobrado)}</div></div>
       <div class="sc sc-err"><div class="sc-l">Total adeudado</div><div class="sc-v" style="font-size:14px">${fmt$(_totalAdeudadoCli)}</div></div>`;
     // Summary by client before detail
+    // Get all unique payment forms
+    const _formasPago=[...new Set(allPagos.map(p=>p.forma||'Sin forma'))];
+    // Per-forma metrics
+    const _metForma=_formasPago.map(f=>{
+      const t=allPagos.filter(p=>(p.forma||'Sin forma')===f).reduce((a,p)=>a+p.monto,0);
+      return `<div class="sc"><div class="sc-l">${f}</div><div class="sc-v" style="font-size:14px">${fmt$(t)}</div></div>`;
+    }).join('');
+    stats.innerHTML+=_metForma;
+    const _fmHdrs=_formasPago.map(f=>`<th style="text-align:right">${f}</th>`).join('');
     const _cliResumen=DB.clients.filter(c=>!cliId||c.id===cliId).map(c=>{
       const _vs=DB.sales.filter(s=>s.clienteId===c.id);
       const _comp=_vs.reduce((a,v)=>a+v.total,0);
       const _cob=_vs.reduce((a,v)=>a+v.pagado,0);
       const _adeu=_comp-_cob;
       if(!_comp)return '';
-      return `<tr><td style="font-weight:500">${c.nombre}</td><td style="text-align:right">${fmt$(_comp)}</td><td style="text-align:right;color:var(--ok)">${fmt$(_cob)}</td><td style="text-align:right;color:${_adeu>0?'var(--err)':'var(--ok)'};font-weight:500">${fmt$(_adeu)}</td></tr>`;
+      const _pC=allPagos.filter(p=>p.clienteId===c.id);
+      const _fmC=_formasPago.map(f=>{
+        const t=_pC.filter(p=>(p.forma||'Sin forma')===f).reduce((a,p)=>a+p.monto,0);
+        return `<td style="text-align:right;font-size:11px">${t>0?fmt$(t):'—'}</td>`;
+      }).join('');
+      return `<tr><td style="font-weight:500">${c.nombre}</td><td style="text-align:right">${fmt$(_comp)}</td>${_fmC}<td style="text-align:right;color:var(--ok)">${fmt$(_cob)}</td><td style="text-align:right;color:${_adeu>0?'var(--err)':'var(--ok)'};font-weight:500">${fmt$(_adeu)}</td></tr>`;
     }).filter(Boolean).join('');
     extra.innerHTML='<div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:12px;margin-bottom:12px">'
       +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Resumen por cliente</div>'
-      +'<div style="overflow-x:auto"><table><thead><tr><th>Cliente</th><th style="text-align:right">Total comprado</th><th style="text-align:right">Cobrado</th><th style="text-align:right">Adeudado</th></tr></thead>'
-      +'<tbody>'+_cliResumen+'</tbody></table></div></div>';
+      +'<div style="overflow-x:auto"><table><thead><tr><th>Cliente</th><th style="text-align:right">Total comprado</th>'
+      +_fmHdrs
+      +'<th style="text-align:right">Cobrado</th><th style="text-align:right">Adeudado</th></tr></thead>'
+      +'<tbody>'+_cliResumen+'</tbody></table></div></div>';;
     allPagos.sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||''));
-    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Tipo</th></tr>';
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Forma</th></tr>';
     tbody.innerHTML=allPagos.map(p=>`<tr>
       <td style="font-size:11px">${fmtDate(p.fecha)}</td><td>${p.cliente}</td><td style="font-size:11px">${p.producto}</td>
+      <td style="font-size:11px">${p.tipoProd||'—'}</td><td style="font-size:11px">${p.presProd||'—'}</td>
       <td style="text-align:right;color:var(--ok);font-weight:500">${fmt$(p.monto)}</td>
       <td><span class="tag">${p.tipo||'real'}</span></td>
+      <td style="font-size:11px">${p.forma||'—'}</td>
     </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>Sin datos</p></div></td></tr>';
   }
   else if(curReporte==='inventario'){
-    let list=DB.inventory.filter(i=>{if(stockFilt==='consig'&&!i.consig)return false;if(stockFilt==='propio'&&i.consig)return false;return true;});
+    let list=DB.inventory.filter(i=>{
+      if(prodFilt&&!(i.nombre||'').includes(prodFilt))return false;
+      if(marcaProdFilt&&(arr(i.marca)[0]||i.marca||'')!==marcaProdFilt)return false;
+      if(tipoProdFilt&&i.tipo!==tipoProdFilt)return false;
+      if(presProdFilt&&i.pres!==presProdFilt)return false;
+      return true;
+    });
+    // reset accumulators per filtered list
+    let _acumExist2=0,_acumExCosto2=0;
     const vc=list.reduce((a,i)=>a+i.stock*i.costo,0),vv=list.reduce((a,i)=>a+i.stock*i.precio,0),tot=list.reduce((a,i)=>a+getExistencia(i),0);
     stats.innerHTML=`<div class="sc"><div class="sc-l">L\u00edneas</div><div class="sc-v">${list.length}</div></div>
       <div class="sc"><div class="sc-l">Existencia total</div><div class="sc-v">${tot}</div></div>
       <div class="sc"><div class="sc-l">Valor costo</div><div class="sc-v" style="font-size:14px">${fmt$(vc)}</div></div>
       <div class="sc sc-ok"><div class="sc-l">Valor venta</div><div class="sc-v" style="font-size:14px">${fmt$(vv)}</div></div>`;
-    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Marca</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer">Stock</th><th onclick="srtTbl(this)" style="cursor:pointer">Consig.</th><th onclick="srtTbl(this)" style="cursor:pointer">Comprom.</th><th onclick="srtTbl(this)" style="cursor:pointer">Existencia</th><th onclick="srtTbl(this)" style="cursor:pointer">Costo u.</th><th onclick="srtTbl(this)" style="cursor:pointer">P.Venta</th><th onclick="srtTbl(this)" style="cursor:pointer">Margen</th></tr>';
-    tbody.innerHTML=list.map(i=>{const ex=getExistencia(i);const m=i.precio>0?Math.round((i.precio-i.costo)/i.precio*100):0;return `<tr>
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Marca</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer">Stock</th><th onclick="srtTbl(this)" style="cursor:pointer">Consig.</th><th onclick="srtTbl(this)" style="cursor:pointer">Comprom.</th><th onclick="srtTbl(this)" style="cursor:pointer">Exist.</th><th onclick="srtTbl(this)" style="cursor:pointer">Costo u.</th><th onclick="srtTbl(this)" style="cursor:pointer">P.Venta</th><th onclick="srtTbl(this)" style="cursor:pointer">Margen</th><th style="text-align:right;background:rgba(201,146,42,.08)">$ Stock</th><th style="text-align:right;background:rgba(201,146,42,.08)">$ Consig</th><th style="text-align:right;background:rgba(201,146,42,.08)">$ Comprom</th><th style="text-align:right;background:rgba(201,146,42,.1);font-weight:700">$ Exist</th><th style="text-align:right;background:rgba(42,95,95,.08)">$ Acum Exist</th><th style="text-align:right;background:rgba(42,95,95,.06)">$ Ex Costo</th><th style="text-align:right;background:rgba(42,95,95,.1)">$ Acum Ex Costo</th></tr>';
+    tbody.innerHTML=list.map(i=>{const ex=getExistencia(i);
+      _acumExist2=(_acumExist2||0);
+      _acumExCosto2=(_acumExCosto2||0);const m=i.precio>0?Math.round((i.precio-i.costo)/i.precio*100):0;return `<tr>
       <td>${i.nombre}</td><td style="font-size:11px">${i.marca}</td><td>${i.tipo}</td><td>${i.pres}</td>
       <td>${i.stock}</td><td>${i.consig?(i.cuds||0):'&mdash;'}</td><td>${i.comprometidas||0}</td>
       <td style="color:${ex<=0?'var(--err)':ex<=2?'var(--warn)':'var(--ok)'};font-weight:500">${ex}</td>
       <td>${fmt$(i.costo)}</td><td>${fmt$(i.precio)}</td><td style="color:${m>=40?'var(--ok)':m>=20?'var(--warn)':'var(--err)'}">${m}%</td>
+      <td style="text-align:right;background:rgba(201,146,42,.05)">${fmt$(i.stock*i.precio)}</td>
+      <td style="text-align:right;background:rgba(201,146,42,.05)">${fmt$((i.cuds||0)*i.precio)}</td>
+      <td style="text-align:right;background:rgba(201,146,42,.05)">${fmt$((i.comprometidas||0)*i.precio)}</td>
+      <td style="text-align:right;background:rgba(201,146,42,.1);font-weight:600">${fmt$(ex*i.precio)}</td>
+      ${(()=>{_acumExist2+=ex*i.precio;return `<td style="text-align:right;background:rgba(42,95,95,.06)">${fmt$(_acumExist2)}</td>`;})()}
+      <td style="text-align:right;background:rgba(42,95,95,.04)">${fmt$(ex*i.costo)}</td>
+      ${(()=>{_acumExCosto2+=ex*i.costo;return `<td style="text-align:right;background:rgba(42,95,95,.08)">${fmt$(_acumExCosto2)}</td>`;})()}
     </tr>`;}).join('')||'<tr><td colspan="10"><div class="empty"><p>Sin datos</p></div></td></tr>';
+  }
+  else if(curReporte==='resumen'){
+    renderResumenEjecutivo(stats,thead,tbody,extra);
   }
   else if(curReporte==='ranking'){
     renderRankingClientes(stats,thead,tbody,extra);
@@ -4896,29 +5077,314 @@ function renderReporte(){
   }
 }
 
-function renderRankingClientes(stats,thead,tbody,extra){
-  const ranking=DB.clients.map(c=>{
-    const ventas=DB.sales.filter(s=>s.clienteId===c.id);
-    const totalComprado=ventas.reduce((a,v)=>a+v.total,0);
-    const totalPagado=ventas.reduce((a,v)=>a+v.pagado,0);
-    const saldo=totalComprado-totalPagado;
-    return {nombre:c.nombre,tel:c.tel,ciudad:c.ciudad,numVentas:ventas.length,totalComprado,totalPagado,saldo};
-  }).filter(c=>c.numVentas>0).sort((a,b)=>b.totalComprado-a.totalComprado);
-  stats.innerHTML=`<div class="sc"><div class="sc-l">Clientes activos</div><div class="sc-v">${ranking.length}</div></div>
-    <div class="sc"><div class="sc-l">Top cliente</div><div class="sc-v" style="font-size:14px">${ranking[0]?ranking[0].nombre:'—'}</div></div>
-    <div class="sc sc-ok"><div class="sc-l">Total cobrado</div><div class="sc-v" style="font-size:14px">${fmt$(ranking.reduce((a,c)=>a+c.totalPagado,0))}</div></div>`;
-  thead.innerHTML='<tr><th>#</th><th>Cliente</th><th>Ciudad</th><th>Ventas</th><th>Total comprado</th><th>Pagado</th><th>Saldo</th></tr>';
-  tbody.innerHTML=ranking.map((c,i)=>`<tr>
-    <td style="font-weight:500;color:${i===0?'var(--gold)':i===1?'var(--mist2)':i===2?'#cd7f32':'inherit'}">${i+1}</td>
-    <td><strong>${c.nombre}</strong></td><td style="font-size:11px">${c.ciudad||'—'}</td>
-    <td>${c.numVentas}</td>
-    <td style="font-weight:500">${fmt$(c.totalComprado)}</td>
-    <td style="color:var(--ok)">${fmt$(c.totalPagado)}</td>
-    <td style="color:${c.saldo>0?'var(--err)':'var(--ok)'};">${fmt$(c.saldo)}</td>
-  </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><p>Sin datos</p></div></td></tr>';
+
+function renderResumenEjecutivo(stats,thead,tbody,extra){
+  // Hide report table — we use extra for everything
+  thead.innerHTML='';tbody.innerHTML='';stats.innerHTML='';
+  extra.innerHTML='';
+
+  // ── Build 13-month range ─────────────────────────────────────────────
+  const now=new Date();
+  const months=[];
+  for(let i=12;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({year:d.getFullYear(),month:d.getMonth(),label:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+' '+String(d.getFullYear()).slice(2)});
+  }
+
+  // ── Aggregate data per month ─────────────────────────────────────────
+  function inMonth(fechaStr,y,m){
+    const iso=dateToISO(fechaStr)||fechaStr||'';
+    if(!iso||iso.length<7)return false;
+    const [fy,fm]=iso.split('-').map(Number);
+    return fy===y&&fm===m+1;
+  }
+  // Build data, null where month has no activity (Chart.js skips nulls)
+  const dataCompras=months.map(({year,month})=>{
+    const v=DB.purchases.filter(c=>c.estado==='recibido'&&inMonth(c.fechaRec||c.fecha,year,month)).reduce((a,c)=>a+c.total,0);
+    return v>0?v:null;
+  });
+  const dataVentas=months.map(({year,month})=>{
+    const v=DB.sales.filter(s=>inMonth(s.fecha,year,month)).reduce((a,s)=>a+s.total,0);
+    return v>0?v:null;
+  });
+  const dataCobros=months.map(({year,month})=>{
+    const v=DB.sales.flatMap(s=>s.pagos||[]).filter(p=>inMonth(p.fecha,year,month)).reduce((a,p)=>a+p.monto,0);
+    return v>0?v:null;
+  });
+  // Filter to only months that have at least some data
+  const activeMonths=months.filter((_,i)=>dataCompras[i]||dataVentas[i]||dataCobros[i]);
+  const activeLabels=months.map((m,i)=>((dataCompras[i]||dataVentas[i]||dataCobros[i])?m.label:null));
+
+
+  // ── Month selector ────────────────────────────────────────────────────
+  const selIdx=12; // default = current month
+  // Reverse for selector: newest (index 12) first
+  const selOpts=[...months].reverse().map((m,oi)=>{
+    const i=12-oi;  // real index into months array
+    return `<option value="${i}"${i===selIdx?' selected':''}>${m.label}</option>`;
+  }).join('');
+
+  // ── Build HTML ────────────────────────────────────────────────────────
+  extra.innerHTML=`
+<div style="max-width:900px;margin:0 auto">
+
+  <!-- Estado de resultados FIRST -->
+  <div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:16px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold)">Estado de resultados</div>
+      <select id="res-edo-mes" onchange="renderEdoResultados()" style="font-size:12px;padding:4px 8px">${selOpts}</select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="edo-resultados-grid">
+      <div id="edo-mes-panel"></div>
+      <div id="edo-acum-panel"></div>
+    </div>
+  </div>
+
+  <!-- Line chart below estado -->
+  <div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:16px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold);margin-bottom:12px">Tendencia 13 meses</div>
+    <canvas id="chart-lines" height="160"></canvas>
+  </div>
+
+  <!-- Bar chart below line chart -->
+  <div style="background:var(--surf2);border:.5px solid var(--bord2);border-radius:var(--r);padding:16px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold)">Desglose semanal</div>
+      <select id="res-mes-sel" onchange="renderResumenBarras()" style="font-size:12px;padding:4px 8px">${selOpts}</select>
+    </div>
+    <canvas id="chart-bars" height="160"></canvas>
+  </div>
+
+</div>`;
+
+  // ── Draw line chart ───────────────────────────────────────────────────
+  const labels=months.map(m=>m.label);
+  const ctx=document.getElementById('chart-lines')?.getContext('2d');
+  if(ctx&&window.Chart){
+    if(window._chartLines)window._chartLines.destroy();
+    window._chartLines=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {label:'Compras',data:dataCompras,borderColor:'#e05353',backgroundColor:'rgba(224,83,83,.1)',tension:.35,fill:true,pointRadius:3,spanGaps:false},
+          {label:'Ventas',data:dataVentas,borderColor:'#c9922a',backgroundColor:'rgba(201,146,42,.1)',tension:.35,fill:true,pointRadius:3,spanGaps:false},
+          {label:'Cobros',data:dataCobros,borderColor:'#2d6a4f',backgroundColor:'rgba(45,106,79,.1)',tension:.35,fill:true,pointRadius:3,spanGaps:false}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:ctx2=>' '+fmt$(ctx2.raw)}}},
+        scales:{y:{ticks:{callback:v=>fmt$(v)},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}
+      }
+    });
+  }
+
+  // Trigger bar chart and estado
+  setTimeout(()=>{renderResumenBarras();renderEdoResultados();},100);
+}
+
+function renderResumenBarras(){
+  const idx=parseInt($$('res-mes-sel')?.value)||12;
+  const months=[];
+  const now=new Date();
+  for(let i=12;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({year:d.getFullYear(),month:d.getMonth()});}
+  const {year,month}=months[idx];
+
+  // Build weeks (Monday-start) for the selected month
+  const firstDay=new Date(year,month,1);
+  const lastDay=new Date(year,month+1,0);
+  // Find first Monday on or before firstDay
+  const startMon=new Date(firstDay);
+  const dow=startMon.getDay()||7; // 1=Mon..7=Sun
+  startMon.setDate(startMon.getDate()-(dow-1));
+  const weeks=[];let cur=new Date(startMon);
+  while(cur<=lastDay){
+    const wStart=new Date(cur);
+    const wEnd=new Date(cur);wEnd.setDate(wEnd.getDate()+6);
+    weeks.push({start:wStart,end:wEnd,label:'S'+(weeks.length+1)+' '+String(wStart.getDate()).padStart(2,'0')+'/'+(wStart.getMonth()+1)});
+    cur.setDate(cur.getDate()+7);
+  }
+
+  function inWeek(fechaStr,wStart,wEnd){
+    const iso=dateToISO(fechaStr)||fechaStr||'';
+    if(!iso||iso.length<10)return false;
+    const d=new Date(iso);return d>=wStart&&d<=wEnd;
+  }
+
+  const wLabels=weeks.map(w=>w.label);
+  const wCompras=weeks.map(w=>DB.purchases.filter(c=>c.estado==='recibido'&&inWeek(c.fechaRec||c.fecha,w.start,w.end)).reduce((a,c)=>a+c.total,0));
+  const wVentas=weeks.map(w=>DB.sales.filter(v=>inWeek(v.fecha,w.start,w.end)).reduce((a,v)=>a+v.total,0));
+  const wCobros=weeks.map(w=>DB.sales.flatMap(v=>v.pagos||[]).filter(p=>inWeek(p.fecha,w.start,w.end)).reduce((a,p)=>a+p.monto,0));
+  const wInv=weeks.map(()=>DB.inventory.reduce((a,i)=>a+getExistencia(i)*i.precio,0));
+
+  const ctx2=document.getElementById('chart-bars')?.getContext('2d');
+  if(ctx2&&window.Chart){
+    if(window._chartBars)window._chartBars.destroy();
+    window._chartBars=new Chart(ctx2,{
+      type:'bar',
+      data:{
+        labels:wLabels,
+        datasets:[
+          {label:'Compras',data:wCompras,backgroundColor:'rgba(224,83,83,.7)'},
+          {label:'Ventas',data:wVentas,backgroundColor:'rgba(201,146,42,.7)'},
+          {label:'Cobros',data:wCobros,backgroundColor:'rgba(45,106,79,.7)'}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:c=>' '+fmt$(c.raw)}}},
+        scales:{y:{ticks:{callback:v=>fmt$(v)},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}
+      }
+    });
+  }
+}
+
+function renderEdoResultados(){
+  const idx=parseInt($$('res-edo-mes')?.value)||12;
+  const now=new Date();
+  const months=[];
+  for(let i=12;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({year:d.getFullYear(),month:d.getMonth()});}
+  const {year,month}=months[idx];
+  const monthName=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month]+' '+year;
+  const yearLabel=year;
+
+  function inM(fechaStr,y,m){const iso=dateToISO(fechaStr)||fechaStr||'';if(!iso||iso.length<7)return false;const[fy,fm]=iso.split('-').map(Number);return fy===y&&fm===m+1;}
+  function inYear(fechaStr,y){const iso=dateToISO(fechaStr)||fechaStr||'';if(!iso)return false;return iso.startsWith(String(y));}
+
+  // Month values
+  const _invExist=DB.inventory.reduce((a,i)=>a+getExistencia(i)*i.precio,0);
+  const _invComp=DB.inventory.reduce((a,i)=>a+(i.comprometidas||0)*i.precio,0);
+  const _cxc=DB.clients.reduce((a,c)=>a+(c.saldo||0),0);
+  const _cxp=DB.providers.reduce((a,p)=>a+Math.max(0,(p.total||0)-(p.pagado||0)),0);
+  const _ingMes=DB.sales.flatMap(v=>v.pagos||[]).filter(p=>inM(p.fecha,year,month)).reduce((a,p)=>a+p.monto,0);
+  const _compMes=DB.purchases.filter(c=>c.estado==='recibido'&&inM(c.fechaRec||c.fecha,year,month)).reduce((a,c)=>a+c.total,0);
+  const _ventaMes=DB.sales.filter(v=>inM(v.fecha,year,month)).reduce((a,v)=>a+v.total,0);
+  // Pagos realizados a proveedores (abonos en historial)
+  const _pagosMes=DB.providers.flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono'&&inM(h.fecha,year,month))).reduce((a,h)=>a+(h.monto||0),0);
+
+  const _cutoff=`${year}-${String(month+2).padStart(2,'0')}-01`;
+  const _ingAcum=DB.sales.flatMap(v=>v.pagos||[]).filter(p=>inYear(p.fecha,year)&&(dateToISO(p.fecha)||'')<_cutoff).reduce((a,p)=>a+p.monto,0);
+  const _compAcum=DB.purchases.filter(c=>c.estado==='recibido'&&inYear(c.fechaRec||c.fecha,year)&&(dateToISO(c.fechaRec||c.fecha)||'')<_cutoff).reduce((a,c)=>a+c.total,0);
+  const _ventaAcum=DB.sales.filter(v=>inYear(v.fecha,year)&&(dateToISO(v.fecha)||'')<_cutoff).reduce((a,v)=>a+v.total,0);
+  const _pagosAcum=DB.providers.flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono'&&inYear(h.fecha,year)&&(dateToISO(h.fecha)||'')<_cutoff)).reduce((a,h)=>a+(h.monto||0),0);
+
+  function edoPanel(title,ing,comp,venta,pagos,isAcum){
+    const utilBruta=venta-comp;
+    // utilNeta now replaced by Flujo neto = Cobrado - Pagos (see rows below)
+    const rows=[
+      {label:'Activo \u2014 Inventario Existencia',val:_invExist,note:'Unidades disponibles (no comprometidas) valoradas a precio de venta',color:'var(--ok)'},
+      {label:'Activo Comprometido',val:_invComp,note:'Unidades comprometidas en ventas pendientes de entrega valoradas a precio de venta',color:'var(--ok)'},
+      {label:'Ventas Registradas',val:venta,note:(isAcum?'Total de ventas generadas (cobradas o no) acumulado en el a\xf1o':'Total de ventas generadas en el mes, incluye adeudos pendientes'),color:'var(--gold)'},
+      {label:'Ingresos Cobrados',val:ing,note:(isAcum?'Pagos efectivamente recibidos de clientes, acumulado en el a\xf1o':'Pagos efectivamente recibidos de clientes durante el mes'),color:'var(--ok)'},
+      {label:'CxC \u2014 Cuentas por Cobrar',val:_cxc,note:'Saldo total pendiente de cobrar a todos los clientes a la fecha',color:'var(--warn)'},
+      {label:'Compras Realizadas',val:-comp,note:(isAcum?'Costo total de inventario recibido acumulado en el a\xf1o':'Costo de inventario recibido durante el mes'),color:'var(--err)'},
+      {label:'CxP \u2014 Cuentas por Pagar',val:-_cxp,note:'Deuda total pendiente con todos los proveedores a la fecha',color:'var(--err)'},
+      {label:'Pagos Realizados a Proveedores',val:-pagos,note:(isAcum?'Total de abonos pagados a proveedores acumulado en el a\xf1o':'Total de abonos pagados a proveedores durante el mes'),color:'var(--err)'},
+      null,
+      {label:'Margen bruto (Ventas - Compras)',val:utilBruta,note:'Diferencia entre ventas registradas y costo del inventario recibido',color:utilBruta>=0?'var(--ok)':'var(--err)',bold:true},
+      {label:'Flujo neto (Cobrado - Pagos a Proveedores)',val:ing-pagos,note:'Diferencia entre lo cobrado de clientes y lo pagado a proveedores en el per\xedodo',color:(ing-pagos)>=0?'var(--ok)':'var(--err)',bold:true},
+    ];
+    return `<div style="border:.5px solid var(--bord2);border-radius:var(--rs);overflow:hidden">
+      <div style="background:var(--gold);color:#fff;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase">${title}</div>
+      ${rows.map(row=>row===null
+        ?'<div style="border-top:.5px solid var(--bord2)"></div>'
+        :`<div style="padding:8px 12px;border-bottom:.5px solid var(--bord2)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:12px;font-weight:${row.bold?'700':'500'}">${row.label}</div>
+              <div style="font-size:10px;color:var(--mist);margin-top:2px">${row.note}</div>
+            </div>
+            <div style="font-size:${row.bold?'15':'13'}px;font-weight:700;color:${row.color};white-space:nowrap;margin-left:8px">${fmt$(row.val)}</div>
+          </div>
+        </div>`
+      ).join('')}
+    </div>`;
+  }
+
+  $$('edo-mes-panel').innerHTML=edoPanel(monthName,_ingMes,_compMes,_ventaMes,_pagosMes,false);
+  $$('edo-acum-panel').innerHTML=edoPanel('Acum. '+yearLabel,_ingAcum,_compAcum,_ventaAcum,_pagosAcum,true);
+}
+
+
+function renderRankingClientes(stats,thead,tbody,extra,_tab){
+  // Use explicit tab param OR persisted value in window var (survives innerHTML replace)
+  if(_tab)window._rankTab=_tab;
+  const curTab=window._rankTab||'clientes';
+  thead.innerHTML='';tbody.innerHTML='';stats.innerHTML='';extra.innerHTML='';
+
+  // Tab switcher
+  extra.innerHTML='<div style="display:flex;gap:0;margin-bottom:14px;border:.5px solid var(--bord2);border-radius:var(--r);overflow:hidden;width:fit-content">'
+    +'<button id="rank-btn-cli" onclick="renderRankingClientes($$(\'reporte-stats\'),$$(\'rep-thead\'),$$(\'rep-tbody\'),$$(\'rep-extra\'),\'clientes\')" '
+    +'style="padding:7px 18px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:'+(curTab==='clientes'?'var(--gold)':'var(--surf2)')+';color:'+(curTab==='clientes'?'#fff':'var(--ink)')+'">Clientes</button>'
+    +'<button id="rank-btn-prod" onclick="renderRankingClientes($$(\'reporte-stats\'),$$(\'rep-thead\'),$$(\'rep-tbody\'),$$(\'rep-extra\'),\'productos\')" '
+    +'style="padding:7px 18px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:'+(curTab==='productos'?'var(--gold)':'var(--surf2)')+';color:'+(curTab==='productos'?'#fff':'var(--ink)')+'">Productos</button>'
+    +'</div>';
+
+  if(curTab==='productos'){
+    const prodMap={};
+    DB.sales.forEach(v=>{
+      const k=v.producto||'?';
+      if(!prodMap[k])prodMap[k]={nombre:k,tipo:v.tipoProd||'',pres:v.presProd||'',unidades:0,monto:0,ventas:0};
+      prodMap[k].unidades+=v.uds||0;
+      prodMap[k].monto+=v.total||0;
+      prodMap[k].ventas++;
+    });
+    const prods=Object.values(prodMap);
+    const maxM=Math.max(...prods.map(p=>p.monto),1);
+    const maxU=Math.max(...prods.map(p=>p.unidades),1);
+    prods.forEach(p=>{p.score=p.monto/maxM*.7+p.unidades/maxU*.3;});
+    prods.sort((a,b)=>b.score-a.score);
+    stats.innerHTML='<div class="sc"><div class="sc-l">Productos</div><div class="sc-v">'+prods.length+'</div></div>'
+      +'<div class="sc"><div class="sc-l">Total vendido</div><div class="sc-v" style="font-size:14px">'+fmt$(prods.reduce((a,p)=>a+p.monto,0))+'</div></div>'
+      +'<div class="sc"><div class="sc-l">Unidades</div><div class="sc-v">'+prods.reduce((a,p)=>a+p.unidades,0)+'</div></div>';
+    thead.innerHTML='<tr><th>#</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Ventas</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Uds</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Score</th></tr>';
+    tbody.innerHTML=prods.slice(0,30).map((p,i)=>`<tr>
+      <td style="font-weight:700;color:var(--gold)">${i+1}</td>
+      <td style="font-weight:500">${p.nombre}</td>
+      <td style="font-size:11px">${p.tipo||'&mdash;'}</td>
+      <td style="font-size:11px">${p.pres||'&mdash;'}</td>
+      <td style="text-align:right">${p.ventas}</td>
+      <td style="text-align:right">${p.unidades}</td>
+      <td style="text-align:right;font-weight:600;color:var(--ok)">${fmt$(p.monto)}</td>
+      <td style="text-align:right;font-size:11px;color:var(--mist)">${(p.score*100).toFixed(1)}</td>
+    </tr>`).join('')||'<tr><td colspan="8"><div class="empty"><p>Sin ventas</p></div></td></tr>';
+  }else{
+    const cliMap={};
+    DB.sales.forEach(v=>{
+      const k=v.clienteId||v.cliente;
+      if(!cliMap[k])cliMap[k]={nombre:v.cliente,ventas:0,monto:0,pagado:0};
+      cliMap[k].ventas++;cliMap[k].monto+=v.total||0;cliMap[k].pagado+=v.pagado||0;
+    });
+    const clis=Object.values(cliMap);
+    const maxM=Math.max(...clis.map(c=>c.monto),1);
+    const maxV=Math.max(...clis.map(c=>c.ventas),1);
+    clis.forEach(c=>{c.score=c.monto/maxM*.7+c.ventas/maxV*.3;});
+    clis.sort((a,b)=>b.score-a.score);
+    stats.innerHTML='<div class="sc"><div class="sc-l">Clientes</div><div class="sc-v">'+clis.length+'</div></div>'
+      +'<div class="sc"><div class="sc-l">Total facturado</div><div class="sc-v" style="font-size:14px">'+fmt$(clis.reduce((a,c)=>a+c.monto,0))+'</div></div>'
+      +'<div class="sc sc-ok"><div class="sc-l">Total cobrado</div><div class="sc-v" style="font-size:14px">'+fmt$(clis.reduce((a,c)=>a+c.pagado,0))+'</div></div>';
+    thead.innerHTML='<tr><th>#</th><th onclick="srtTbl(this)" style="cursor:pointer">Cliente</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Ventas</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Total</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Cobrado</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Score</th></tr>';
+    tbody.innerHTML=clis.map((c,i)=>`<tr>
+      <td style="font-weight:700;color:var(--gold)">${i+1}</td>
+      <td style="font-weight:500">${c.nombre}</td>
+      <td style="text-align:right">${c.ventas}</td>
+      <td style="text-align:right;font-weight:600">${fmt$(c.monto)}</td>
+      <td style="text-align:right;color:var(--ok)">${fmt$(c.pagado)}</td>
+      <td style="text-align:right;font-size:11px;color:var(--mist)">${(c.score*100).toFixed(1)}</td>
+    </tr>`).join('')||'<tr><td colspan="6"><div class="empty"><p>Sin ventas</p></div></td></tr>';
+  }
 }
 
 function renderProyeccionCobranza(stats,thead,tbody,extra){
+  // Apply filters from report bar
+  const _cob_cli=parseInt(cv('r-cliente'))||0;
+  const _cob_prod=cv('r-producto')||'';
+  const _cob_tipo=cv('r-tipo-prod')||'';
+  const _cob_pres=cv('r-pres-prod')||'';
+  const _cob_est=cv('r-estado-venta')||'';
+  const _cob_desde=cv('r-desde')||'';
+  const _cob_hasta=cv('r-hasta')||'';
   const hoy=new Date();hoy.setHours(0,0,0,0);
 
   // ── Build full payment timeline: expand plan_pagos OR generate from prox+quinc
@@ -5111,6 +5577,14 @@ populateInvFilters();
   const fsMis=$$('mq-familia');if(fsMis)fsMis.innerHTML='<option value="">Familia</option>'+fams.map(f=>`<option>${f}</option>`).join('');
   const mc=[...new Set(DB.products.filter(p=>p.mio).map(p=>arr(p.marca)[0]||p.marca||''))].filter(Boolean).sort();
   const msMis=$$('mq-marca');if(msMis)msMis.innerHTML='<option value="">Marca &aacute;rabe</option>'+mc.map(m=>`<option>${m}</option>`).join('');
+  // Populate iv-prod
+  const _prods2=[...new Set(DB.inventory.map(i=>i.nombre).filter(Boolean))].sort();
+  const ivProd=$$('iv-prod');if(ivProd)ivProd.innerHTML='<option value="">Producto</option>'+_prods2.map(n=>`<option>${n}</option>`).join('');
+  // Populate iv-tipo and iv-pres
+  const _tipos=[...new Set(DB.inventory.map(i=>i.tipo).filter(Boolean))].sort();
+  const ivTipo=$$('iv-tipo');if(ivTipo)ivTipo.innerHTML='<option value="">Tipo</option>'+_tipos.map(t=>`<option>${t}</option>`).join('');
+  const _pres=[...new Set(DB.inventory.map(i=>i.pres).filter(Boolean))].sort();
+  const ivPres=$$('iv-pres');if(ivPres)ivPres.innerHTML='<option value="">Presentación</option>'+_pres.map(p=>`<option>${p}</option>`).join('');
 })();
 
 </script>
