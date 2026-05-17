@@ -948,6 +948,12 @@ tbody tr:hover td{background:var(--surf2)}
     <button class="btn btn-outline btn-sm" onclick="saveToGoogle()">&#8593; Guardar en Google</button>
   </div>
   <div id="sync-msg" style="font-size:12px;color:var(--mist);min-height:18px"></div>
+  <div class="sdiv"><span>Datos de demostración</span></div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px">
+    <button class="btn btn-outline btn-sm" onclick="cargarDemoConfirm()">&#9654; Cargar datos demo</button>
+    <button class="btn btn-outline btn-sm" onclick="vaciarYCargarGoogleConfirm()">&#127989; Limpiar y cargar desde Google</button>
+  </div>
+  <div id="demo-msg" style="font-size:11px;color:var(--mist);margin-bottom:8px"></div>
   <div class="sdiv"><span>Respaldo local (sin internet)</span></div>
   <div style="display:flex;gap:7px;flex-wrap:wrap">
     <button class="btn btn-outline btn-sm" onclick="exportAllData()">&#8595; Exportar Excel local</button>
@@ -1217,7 +1223,7 @@ function loadDB(){
 }
 function saveDB(){localStorage.setItem('aura_db',JSON.stringify(DB));}
 let DB=loadDB();
-let NID=Math.max(100,...DB.products.map(p=>p.id),...DB.inventory.map(i=>i.id),...DB.sales.map(s=>s.id),...DB.purchases.map(p=>p.id),...DB.providers.map(p=>p.id))+1;
+let NID=Math.max(100,...(DB.products||[]).map(p=>p.id),...(DB.inventory||[]).map(i=>i.id),...(DB.sales||[]).map(s=>s.id),...(DB.purchases||[]).map(p=>p.id),...(DB.providers||[]).map(p=>p.id),...(DB.clients||[]).map(c=>c.id))+1;
 
 // Migrate legacy: add imgs/img_main_id if missing
 DB.products.forEach(p=>{
@@ -2545,6 +2551,43 @@ async function handleBatchImg(e,id){
 // ═══════════════════════════════════════════════════════════
 const MIS_FIELDS={genero:false,marca:false,nombre:true,familia:true,uso:true,precio:true,descripcion:false,inspiracion:true,perfume_principal:false,temporada:false,concentracion:false,duracion:false,proyeccion:false,intensidad:false,notas:false};
 const MIS_LABELS={genero:'Género',marca:'Marca árabe',nombre:'Nombre',familia:'Familia',uso:'Uso',precio:'Precio',descripcion:'Descripción',inspiracion:'Inspiración',perfume_principal:'Perfume Principal',temporada:'Temporada',concentracion:'Concentración',duracion:'Duración',proyeccion:'Proyección',intensidad:'Intensidad',notas:'Notas olfativas'};
+
+
+function cargarDemoConfirm(){
+  if(!confirm('¿Cargar los datos de demostración? Esto REEMPLAZARÁ todos los datos actuales en la app (no afecta Google Sheets).'))return;
+  // Build fresh demo DB using same default structure as loadDB
+  const demoStr=localStorage.getItem('aura_db_demo_backup');
+  // Re-create demo from the hardcoded defaults
+  localStorage.removeItem('aura_db');  // clear current
+  DB=loadDB();  // reloads defaults because localStorage is now empty
+  // Recalculate NID
+  NID=Math.max(100,...DB.products.map(p=>p.id),...DB.inventory.map(i=>i.id),...DB.sales.map(s=>s.id),...DB.clients.map(c=>c.id),...DB.providers.map(p=>p.id),...DB.purchases.map(c=>c.id))+1;
+  saveDB();
+  populateInvFilters();
+  renderInv();
+  const m=$$('demo-msg');
+  if(m)m.textContent='Datos demo cargados correctamente.';
+  toastMsg('Datos demo cargados','ok');
+}
+
+async function vaciarYCargarGoogleConfirm(){
+  if(!SCRIPT_URL){toastMsg('Configura primero la URL del Apps Script','err');return;}
+  if(!confirm('¿Limpiar TODO el localStorage y recargar desde Google Sheets?\n\nEsto reemplazará los datos locales con exactamente lo que hay en Google Sheets (incluyendo IDs).'))return;
+  const m=$$('demo-msg');
+  if(m)m.textContent='Limpiando y cargando desde Google...';
+  // Preserve only the script URL
+  const url=SCRIPT_URL;
+  localStorage.clear();
+  localStorage.setItem('aura_script_url',url);
+  // Initialize empty DB
+  DB={products:[],inventory:[],sales:[],clients:[],providers:[],purchases:[],packages:[],payments_prov:[]};
+  saveDB();
+  // Now reload page — on reload loadDB() finds empty localStorage and
+  // the app will call loadFromGoogle automatically via init, OR user
+  // can press 'Cargar de Google' manually.
+  if(m)m.textContent='Local limpiado. Recargando app...';
+  setTimeout(()=>location.reload(), 800);
+}
 
 async function recargarListas(){
   if(!SCRIPT_URL){toastMsg('Configura la URL del script primero','err');return;}
