@@ -2554,39 +2554,26 @@ const MIS_LABELS={genero:'Género',marca:'Marca árabe',nombre:'Nombre',familia:
 
 
 function cargarDemoConfirm(){
-  if(!confirm('¿Cargar los datos de demostración? Esto REEMPLAZARÁ todos los datos actuales en la app (no afecta Google Sheets).'))return;
-  // Build fresh demo DB using same default structure as loadDB
-  const demoStr=localStorage.getItem('aura_db_demo_backup');
-  // Re-create demo from the hardcoded defaults
-  localStorage.removeItem('aura_db');  // clear current
-  DB=loadDB();  // reloads defaults because localStorage is now empty
-  // Recalculate NID
-  NID=Math.max(100,...DB.products.map(p=>p.id),...DB.inventory.map(i=>i.id),...DB.sales.map(s=>s.id),...DB.clients.map(c=>c.id),...DB.providers.map(p=>p.id),...DB.purchases.map(c=>c.id))+1;
-  saveDB();
-  populateInvFilters();
-  renderInv();
-  const m=$$('demo-msg');
-  if(m)m.textContent='Datos demo cargados correctamente.';
+  if(!confirm('Cargar los datos de demostracion? Esto REEMPLAZARA todos los datos actuales en la app (no afecta Google Sheets).'))return;
+  localStorage.removeItem('aura_db');
+  DB=loadDB();
+  NID=Math.max(100,...(DB.products||[]).map(p=>p.id),...(DB.inventory||[]).map(i=>i.id),...(DB.sales||[]).map(s=>s.id),...(DB.clients||[]).map(c=>c.id),...(DB.providers||[]).map(p=>p.id),...(DB.purchases||[]).map(c=>c.id))+1;
+  saveDB();populateInvFilters();renderInv();
+  const m=$$('demo-msg');if(m)m.textContent='Datos demo cargados correctamente.';
   toastMsg('Datos demo cargados','ok');
 }
 
 async function vaciarYCargarGoogleConfirm(){
   if(!SCRIPT_URL){toastMsg('Configura primero la URL del Apps Script','err');return;}
-  if(!confirm('¿Limpiar TODO el localStorage y recargar desde Google Sheets?\n\nEsto reemplazará los datos locales con exactamente lo que hay en Google Sheets (incluyendo IDs).'))return;
-  const m=$$('demo-msg');
-  if(m)m.textContent='Limpiando y cargando desde Google...';
-  // Preserve only the script URL
+  if(!confirm('Limpiar TODO el localStorage y recargar desde Google Sheets?\n\nEsto reemplazara los datos locales con exactamente lo que hay en Google Sheets.'))return;
+  const m=$$('demo-msg');if(m)m.textContent='Limpiando y cargando desde Google...';
   const url=SCRIPT_URL;
   localStorage.clear();
   localStorage.setItem('aura_script_url',url);
-  // Initialize empty DB
   DB={products:[],inventory:[],sales:[],clients:[],providers:[],purchases:[],packages:[],payments_prov:[]};
   saveDB();
-  // Now reload page — on reload loadDB() finds empty localStorage and
-  // the app will call loadFromGoogle automatically via init, OR user
-  // can press 'Cargar de Google' manually.
   if(m)m.textContent='Local limpiado. Recargando app...';
-  setTimeout(()=>location.reload(), 800);
+  setTimeout(()=>location.reload(),800);
 }
 
 async function recargarListas(){
@@ -3260,19 +3247,14 @@ function delAdminItem(key,val){LISTS[key]=(LISTS[key]||[]).filter(v=>v!==val);sa
 function downloadTemplate(){
   if(!window.XLSX){toastMsg('Cargando...','err');setTimeout(downloadTemplate,1500);return;}
 
-  const col2l=n=>n<26?String.fromCharCode(65+n):'A'+String.fromCharCode(65+n-26);
-  // sqref uses NO dollar signs: "B6:B105"
-  const hRangeSq=(cl,rs,re)=>`${cl}${rs}:${cl}${re}`;
-  // formula1 range uses dollar signs: "$B$2:$B$20"
-  const absRange=(cl,rs,re)=>`$${cl}$${rs}:$${cl}$${re}`;
-
   const L=LISTS;
-  const fuentes   =['Oud Miraj','Fragrantica','Proveedor propio','Otro'];
-  const generos   =['Mujer','Hombre','Unisex'];
-  const sinono    =['SI','NO'];
-  const intensidades=L.intensidades&&L.intensidades.length?L.intensidades:['Ligera','Media','Alta','Fuerte'];
+  const intensidades=L.intensidades&&L.intensidades.length
+    ?L.intensidades:['Ligera','Media','Alta','Fuerte'];
+  const _sino    = ['SI','NO'];
+  const _generos = L.generos  ||['Mujer','Hombre','Unisex'];
+  const _fuentes  = L.fuentes ||['Oud Miraj','Fragrantica','Proveedor propio','Otro'];
 
-  // ── Headers (25 cols, A-Y) ───────────────────────────────────────────────
+  // ── Headers ───────────────────────────────────────────────────────────────
   const headers=[
     'nombre_arabe','marca_arabe','concentracion','fuente','precio',
     'inspo_marca','inspo_nombre','genero','familia_olfativa','uso_sugerido',
@@ -3281,47 +3263,61 @@ function downloadTemplate(){
     'mi_negocio','favorito','prospecto','verificado','no_vendible','oculto'
   ];
   const hIdx={}; headers.forEach((h,i)=>hIdx[h]=i);
-  const hL=name=>col2l(hIdx[name]);
 
-  const DATA_ROW_START=6;   // Excel row of first data row (1-based)
-  const DATA_ROW_END=105;   // Excel row of last data row (100 rows)
-
-  // ── LISTAS sheet ─────────────────────────────────────────────────────────
-  // Columns in order — each becomes a column in the Listas sheet
-  const listsDef=[
-    {key:'marcas_arabes',    vals:L.marcas_arabes   ||[]},
-    {key:'concentraciones',  vals:L.concentraciones ||[]},
-    {key:'marcas_inspiracion',vals:L.marcas_inspiracion||[]},
-    {key:'familias',         vals:L.familias        ||[]},
-    {key:'usos',             vals:L.usos            ||[]},
-    {key:'temporadas',       vals:L.temporadas      ||[]},
-    {key:'duraciones',       vals:L.duraciones      ||[]},
-    {key:'proyecciones',     vals:L.proyecciones    ||[]},
-    {key:'intensidades',     vals:intensidades},
-    {key:'notas_top',        vals:L.notas_top       ||[]},
-    {key:'notas_corazon',    vals:L.notas_corazon   ||[]},
-    {key:'notas_fondo',      vals:L.notas_fondo     ||[]},
-    {key:'fuente',           vals:fuentes},
-    {key:'genero',           vals:generos},
-    {key:'si_no',            vals:sinono},
-  ];
-  // Col letter in Listas sheet for each key
-  const listsIdx={}; listsDef.forEach((d,i)=>listsIdx[d.key]=i);
-  const lsL=key=>col2l(listsIdx[key]);
-  const lsAbsRange=key=>{
-    const c=lsL(key); const n=listsDef[listsIdx[key]].vals.length;
-    return absRange(c,2,1+n);   // "$A$2:$A$12"
+  // ── Valid values per column (for red-cell check on sample row) ────────────
+  const validVals={
+    'marca_arabe':    new Set(L.marcas_arabes      ||[]),
+    'concentracion':  new Set(L.concentraciones    ||[]),
+    'fuente':         new Set(_fuentes),
+    'inspo_marca':    new Set(L.marcas_inspiracion ||[]),
+    'genero':         new Set(_generos),
+    'familia_olfativa':new Set(L.familias          ||[]),
+    'uso_sugerido':   new Set(L.usos               ||[]),
+    'temporada':      new Set(L.temporadas         ||[]),
+    'notas_salida':   new Set(L.notas_top          ||[]),
+    'notas_corazon':  new Set(L.notas_corazon      ||[]),
+    'notas_fondo':    new Set(L.notas_fondo        ||[]),
+    'duracion':       new Set(L.duraciones         ||[]),
+    'proyeccion':     new Set(L.proyecciones       ||[]),
+    'intensidad':     new Set(intensidades),
+    'mi_negocio':     new Set(_sino),
+    'favorito':       new Set(_sino),
+    'prospecto':      new Set(_sino),
+    'verificado':     new Set(_sino),
+    'no_vendible':    new Set(_sino),
+    'oculto':         new Set(_sino),
   };
 
-  const maxLRows=Math.max(...listsDef.map(d=>d.vals.length));
-  const listsAOA=[listsDef.map(d=>d.key)];
-  for(let r=0;r<maxLRows;r++)
-    listsAOA.push(listsDef.map(d=>d.vals[r]||''));
+  // Check if a sample cell value is invalid for its column
+  // For multi-value cols (familia, uso, etc.) check each segment split by |
+  const multiValCols=new Set(['familia_olfativa','uso_sugerido','temporada',
+    'notas_salida','notas_corazon','notas_fondo']);
+  function isInvalid(colName, val){
+    if(!validVals[colName]) return false; // no validation for this col
+    if(!val||val==='') return false;      // empty = no highlight
+    if(multiValCols.has(colName)){
+      // Each segment must be in the list to be considered valid
+      // If ALL segments are invalid → red. If mixed → red (custom value).
+      const segs=String(val).split('|').map(s=>s.trim()).filter(Boolean);
+      return segs.length>0 && segs.every(s=>!validVals[colName].has(s));
+    }
+    return !validVals[colName].has(String(val));
+  }
 
-  const wsLists=XLSX.utils.aoa_to_sheet(listsAOA);
-  wsLists['!cols']=listsDef.map(()=>({wch:22}));
+  // ── Cell style helpers ────────────────────────────────────────────────────
+  const styleNormal ={font:{name:'Calibri',sz:11}};
+  const styleRed    ={font:{name:'Calibri',sz:11,color:{rgb:'CC0000'}}};
+  const styleHeader ={font:{name:'Calibri',sz:11,bold:true},
+    fill:{fgColor:{rgb:'1E1810'}},
+    alignment:{horizontal:'center'}};
+  const styleTitle  ={font:{name:'Calibri',sz:12,bold:true}};
+  const styleNote   ={font:{name:'Calibri',sz:10,italic:true,color:{rgb:'7A6A55'}}};
+  const styleSample ={font:{name:'Calibri',sz:11,italic:true},
+    fill:{fgColor:{rgb:'FEF3C7'}}};
+  const styleSampleRed={font:{name:'Calibri',sz:11,italic:true,color:{rgb:'CC0000'}},
+    fill:{fgColor:{rgb:'FEF3C7'}}};
 
-  // ── Sample row ────────────────────────────────────────────────────────────
+  // ── Sample row values ─────────────────────────────────────────────────────
   const sample=[
     'Sheikh Al Layl','Miraj','EDP','Oud Miraj','950','YSL','Black Opium',
     'Mujer','Oriental','Noche','Invierno',
@@ -3330,175 +3326,92 @@ function downloadTemplate(){
     'SI','SI','NO','SI','NO','NO'
   ];
 
-  const aoa=[
-    ['AURA DE ORIENTE - Plantilla de importacion incremental de Perfumes'],
-    ['Para multiples valores en un campo usa | como separador. Ej: Oriental|Floral'],
-    ['Tipo, Presentacion e Inventario se configuran por separado en la seccion Inventario'],
-    [''],
-    headers, sample
+  // ── Build worksheet manually for full style control ───────────────────────
+  const ws={'!type':'sheet'};
+
+  function setCell(ws, r, c, v, s){
+    const ref=XLSX.utils.encode_cell({r,c});
+    const t=typeof v==='number'?'n':'s';
+    ws[ref]={v, t, s};
+  }
+
+  // Row 0: title
+  setCell(ws,0,0,'AURA DE ORIENTE - Plantilla de importacion incremental de Perfumes',styleTitle);
+
+  // Row 1: note multi-val
+  setCell(ws,1,0,'Para multiples valores en un campo usa | como separador. Ej: Oriental|Floral',styleNote);
+
+  // Row 2: note inventario
+  setCell(ws,2,0,'Tipo, Presentacion e Inventario se configuran por separado en la seccion Inventario',styleNote);
+
+  // Row 3: blank
+
+  // Row 4: headers
+  headers.forEach((h,c)=>setCell(ws,4,c,h,styleHeader));
+
+  // Row 5: sample (red if value not in list)
+  sample.forEach((v,c)=>{
+    const colName=headers[c];
+    const invalid=isInvalid(colName,v);
+    setCell(ws,5,c,v,invalid?styleSampleRed:styleSample);
+  });
+
+  // Rows 6..105: 100 empty data rows (no style needed — plain empty)
+  // Just ensure the sheet range covers them
+  const lastRow=105; // 0-based row 105 = Excel row 106
+
+  // Set sheet range
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:lastRow,c:headers.length-1}});
+
+  // Column widths
+  ws['!cols']=headers.map((_,i)=>({
+    wch:i===14||i===18?40:i===0?24:i===6?20:16
+  }));
+
+  // ── Listas sheet ──────────────────────────────────────────────────────────
+  const listsDef=[
+    {key:'marcas_arabes',      vals:L.marcas_arabes      ||[]},
+    {key:'concentraciones',    vals:L.concentraciones    ||[]},
+    {key:'marcas_inspiracion', vals:L.marcas_inspiracion ||[]},
+    {key:'familias',           vals:L.familias           ||[]},
+    {key:'usos',               vals:L.usos               ||[]},
+    {key:'temporadas',         vals:L.temporadas         ||[]},
+    {key:'duraciones',         vals:L.duraciones         ||[]},
+    {key:'proyecciones',       vals:L.proyecciones       ||[]},
+    {key:'intensidades',       vals:intensidades},
+    {key:'notas_top',          vals:L.notas_top          ||[]},
+    {key:'notas_corazon',      vals:L.notas_corazon      ||[]},
+    {key:'notas_fondo',        vals:L.notas_fondo        ||[]},
+    {key:'si_no',              vals:_sino},
+    {key:'genero',             vals:_generos},
+    {key:'fuente',             vals:_fuentes},
   ];
-  while(aoa.length<=DATA_ROW_END-1) aoa.push([]);
+  const maxLRows=Math.max(...listsDef.map(d=>d.vals.length));
+  const listsAOA=[listsDef.map(d=>d.key)];
+  for(let r=0;r<maxLRows;r++)
+    listsAOA.push(listsDef.map(d=>d.vals[r]||''));
+  const wsLists=XLSX.utils.aoa_to_sheet(listsAOA);
+  wsLists['!cols']=listsDef.map(()=>({wch:22}));
 
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols']=headers.map((_,i)=>({wch:i===14||i===18?40:i===0?24:i===6?20:16}));
-
+  // ── Assemble and download ─────────────────────────────────────────────────
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Perfumes');
   XLSX.utils.book_append_sheet(wb,wsLists,'Listas');
-
-  // ── Write base xlsx to ArrayBuffer ───────────────────────────────────────
-  const wbOut=XLSX.write(wb,{type:'array',bookType:'xlsx'});
-
-  // ── Patch xlsx zip with XML injections ───────────────────────────────────
-  (async()=>{
-    try{
-      // Load JSZip if needed
-      if(!window.JSZip){
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-          s.onload=res; s.onerror=()=>rej(new Error('JSZip no disponible'));
-          document.head.appendChild(s);
-        });
-      }
-
-      const zip=await JSZip.loadAsync(wbOut);
-
-      // ── 1. workbook.xml — add DefinedNames for each list (cross-sheet refs) ──
-      // Excel requires named ranges in workbook for cross-sheet list validation
-      let wbXml=await zip.file('xl/workbook.xml').async('string');
-      let defNames='';
-      listsDef.forEach((d,i)=>{
-        const c=lsL(d.key); const n=d.vals.length;
-        // localSheetId="0" means it's a workbook-scoped name
-        defNames+=`<definedName name="_list_${d.key}">'Listas'!$${c}$2:$${c}$${1+n}</definedName>`;
-      });
-      if(defNames){
-        if(wbXml.includes('<definedNames>')){
-          wbXml=wbXml.replace('<definedNames>','<definedNames>'+defNames);
-        } else {
-          wbXml=wbXml.replace('</workbook>','<definedNames>'+defNames+'</definedNames></workbook>');
-        }
-        zip.file('xl/workbook.xml',wbXml);
-      }
-
-      // ── 2. styles.xml — add dxf (red fill) at index 0 ───────────────────
-      let stylesXml=await zip.file('xl/styles.xml').async('string');
-      const redDxf='<dxf><fill><patternFill><bgColor rgb="FFFF9999"/></patternFill></fill></dxf>';
-      if(stylesXml.includes('<dxfs count="0"/>')){
-        stylesXml=stylesXml.replace('<dxfs count="0"/>',`<dxfs count="1">${redDxf}</dxfs>`);
-      } else if(/<dxfs count="\d+"/.test(stylesXml)){
-        stylesXml=stylesXml.replace(/<dxfs count="(\d+)">/,(m,n)=>`<dxfs count="${parseInt(n)+1}>`)
-          .replace(/(<dxfs[^>]*>)/,'$1'+redDxf);
-      } else {
-        stylesXml=stylesXml.replace('</styleSheet>',`<dxfs count="1">${redDxf}</dxfs></styleSheet>`);
-      }
-      zip.file('xl/styles.xml',stylesXml);
-
-      // ── 3. sheet1.xml — inject conditionalFormatting + dataValidations ───
-      let shXml=await zip.file('xl/worksheets/sheet1.xml').async('string');
-
-      // Build conditionalFormatting blocks (must come BEFORE dataValidations in OOXML order)
-      // One <conditionalFormatting> per column
-      // Formula: AND(B6<>"", COUNTIF(_list_marcas_arabes, B6)=0)
-      // CF formula uses mixed ref: $B6 (col fixed, row relative)
-      const cfCols=[
-        {h:'marca_arabe',    listKey:'marcas_arabes'},
-        {h:'concentracion',  listKey:'concentraciones'},
-        {h:'fuente',         listKey:'fuente'},
-        {h:'inspo_marca',    listKey:'marcas_inspiracion'},
-        {h:'genero',         listKey:'genero'},
-        {h:'familia_olfativa',listKey:'familias'},
-        {h:'uso_sugerido',   listKey:'usos'},
-        {h:'temporada',      listKey:'temporadas'},
-        {h:'notas_salida',   listKey:'notas_top'},
-        {h:'notas_corazon',  listKey:'notas_corazon'},
-        {h:'notas_fondo',    listKey:'notas_fondo'},
-        {h:'duracion',       listKey:'duraciones'},
-        {h:'proyeccion',     listKey:'proyecciones'},
-        {h:'intensidad',     listKey:'intensidades'},
-        {h:'mi_negocio',     listKey:'si_no'},
-        {h:'favorito',       listKey:'si_no'},
-        {h:'prospecto',      listKey:'si_no'},
-        {h:'verificado',     listKey:'si_no'},
-        {h:'no_vendible',    listKey:'si_no'},
-        {h:'oculto',         listKey:'si_no'},
-      ];
-      let cfXml='';
-      cfCols.forEach(({h,listKey},pri)=>{
-        const cl=hL(h);
-        const sqref=hRangeSq(cl,DATA_ROW_START,DATA_ROW_END); // no $ signs
-        const lc=lsL(listKey);
-        const ln=listsDef[listsIdx[listKey]].vals.length;
-        // COUNTIF with absolute sheet reference
-        const countifRange=`'Listas'!$${lc}$2:$${lc}$${1+ln}`;
-        const formula=`AND($${cl}${DATA_ROW_START}&lt;&gt;&quot;&quot;,COUNTIF(${countifRange},$${cl}${DATA_ROW_START})=0)`;
-        cfXml+=`<conditionalFormatting sqref="${sqref}">`;
-        cfXml+=`<cfRule type="expression" dxfId="0" priority="${pri+1}">`;
-        cfXml+=`<formula>${formula}</formula></cfRule></conditionalFormatting>`;
-      });
-
-      // Build dataValidations block (goes AFTER conditionalFormatting)
-      // sqref: no $ signs. formula1: named range reference "_list_key"
-      const dvCols=[
-        {h:'marca_arabe',  listKey:'marcas_arabes'},
-        {h:'concentracion',listKey:'concentraciones'},
-        {h:'fuente',       listKey:'fuente'},
-        {h:'inspo_marca',  listKey:'marcas_inspiracion'},
-        {h:'genero',       listKey:'genero'},
-        {h:'duracion',     listKey:'duraciones'},
-        {h:'proyeccion',   listKey:'proyecciones'},
-        {h:'intensidad',   listKey:'intensidades'},
-        {h:'mi_negocio',   listKey:'si_no'},
-        {h:'favorito',     listKey:'si_no'},
-        {h:'prospecto',    listKey:'si_no'},
-        {h:'verificado',   listKey:'si_no'},
-        {h:'no_vendible',  listKey:'si_no'},
-        {h:'oculto',       listKey:'si_no'},
-      ];
-      let dvXml=`<dataValidations count="${dvCols.length}">`;
-      dvCols.forEach(({h,listKey})=>{
-        const cl=hL(h);
-        const sqref=hRangeSq(cl,DATA_ROW_START,DATA_ROW_END);
-        // Use defined name — no sheet ref in formula1 needed
-        dvXml+=`<dataValidation type="list" allowBlank="1" showDropDown="0" `+
-          `showErrorMessage="1" errorStyle="warning" `+
-          `errorTitle="Valor no en lista" error="El valor no esta en la lista. Puedes continuar." `+
-          `sqref="${sqref}"><formula1>_list_${listKey}</formula1></dataValidation>`;
-      });
-      dvXml+='</dataValidations>';
-
-      // Remove any existing empty dataValidations or conditionalFormatting
-      shXml=shXml.replace(/<dataValidations[^/]*\/>/g,'');
-      shXml=shXml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/g,'');
-      shXml=shXml.replace(/<conditionalFormatting[\s\S]*?<\/conditionalFormatting>/g,'');
-
-      // OOXML strict order: CF must come before dataValidations
-      // Insert both before </worksheet>
-      shXml=shXml.replace('</worksheet>',cfXml+dvXml+'</worksheet>');
-      zip.file('xl/worksheets/sheet1.xml',shXml);
-
-      // ── 4. Generate and download ──────────────────────────────────────────
-      const blob=await zip.generateAsync({
-        type:'blob',
-        mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        compression:'DEFLATE'
-      });
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download='plantilla_aura_de_oriente.xlsx';
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),60000);
-      toastMsg('Plantilla descargada','ok');
-
-    }catch(err){
-      console.error('Template XML patch error:',err);
-      // Fallback: plain xlsx without validations
-      XLSX.writeFile(wb,'plantilla_aura_de_oriente.xlsx');
-      toastMsg('Plantilla descargada (sin validaciones)','ok');
-    }
-  })();
+  XLSX.writeFile(wb,'plantilla_aura_de_oriente.xlsx');
+  toastMsg('Plantilla descargada','ok');
+}async function confirmImport(){
+  if(!xlPending.length)return;
+  const existing=new Set(DB.products.map(p=>(p.nombre+'|'+arr(p.marca)[0]).toLowerCase()));
+  let added=0,dup=0;
+  xlPending.forEach(p=>{if(existing.has((p.nombre+'|'+p.marca).toLowerCase()))dup++;else{DB.products.push(p);NID++;added++;}});
+  xlPending=[];$$('btn-xl-ok').style.display='none';
+  $$('xl-status').innerHTML=`<span style="color:var(--ok)">Importados: ${added} / Duplicados: ${dup}</span>`;
+  saveDB();markPending();closeM('m-import');renderCatalog();
+  // Save immediately — this is a critical operation
+  await saveToGoogle();
+  toastMsg(added+' perfume(s) importados','ok');
 }
+
 let xlPending=[];
 function handleXL(e){
   const file=e.target.files[0];if(!file)return;
@@ -3519,27 +3432,18 @@ function handleXL(e){
         imarca:get(row,'inspo_marca'),inombre:get(row,'inspo_nombre'),genero:get(row,'genero')||'Unisex',
         familia:getA(row,'familia_olfativa'),uso:getA(row,'uso_sugerido'),temporada:getA(row,'temporada'),
         top:getA(row,'notas_salida'),cor:getA(row,'notas_corazon'),fondo:getA(row,'notas_fondo'),
-        desc:get(row,'descripcion')||'Sin descripcion',dur:get(row,'duracion'),proy:get(row,'proyeccion'),extra:get(row,'notas_extra'),
+        desc:get(row,'descripcion')||'Sin descripcion',dur:get(row,'duracion'),proy:get(row,'proyeccion'),
+        intensidad:get(row,'intensidad')||'',
+        extra:get(row,'notas_extra'),
         mio:get(row,'mi_negocio').toUpperCase()==='SI',fav:get(row,'favorito').toUpperCase()==='SI',
         pros:get(row,'prospecto').toUpperCase()==='SI',verificado:get(row,'verificado').toUpperCase()==='SI',
         no_vendible:get(row,'no_vendible').toUpperCase()==='SI',oculto:get(row,'oculto').toUpperCase()==='SI',
-        img:null,img_url:null,img_id:null,imgs:[],img_main_id:null,perfume_principal:'',origen_id:null})).filter(p=>p.nombre);
-      status.innerHTML=`<span style="color:var(--ok)">${xlPending.length} perfume(s) listos para importar</span>`;
+        img:null,img_url:null,img_id:null,imgs:[],img_main_id:null,perfume_principal:'',origen_id:null
+      })).filter(p=>p.nombre);
+      status.innerHTML=`<span style="color:var(--ok)">${xlPending.length} perfume(s) listos para importar. Presiona Importar para confirmar.</span>`;
       $$('btn-xl-ok').style.display='inline-flex';
     }catch(err){status.innerHTML=`<span style="color:var(--err)">Error: ${err.message}</span>`;}
   };reader.readAsArrayBuffer(file);
-}
-async function confirmImport(){
-  if(!xlPending.length)return;
-  const existing=new Set(DB.products.map(p=>(p.nombre+'|'+arr(p.marca)[0]).toLowerCase()));
-  let added=0,dup=0;
-  xlPending.forEach(p=>{if(existing.has((p.nombre+'|'+p.marca).toLowerCase()))dup++;else{DB.products.push(p);NID++;added++;}});
-  xlPending=[];$$('btn-xl-ok').style.display='none';
-  $$('xl-status').innerHTML=`<span style="color:var(--ok)">Importados: ${added} / Duplicados: ${dup}</span>`;
-  saveDB();markPending();closeM('m-import');renderCatalog();
-  // Save immediately — this is a critical operation
-  await saveToGoogle();
-  toastMsg(added+' perfume(s) importados','ok');
 }
 
 function exportAllData(){
