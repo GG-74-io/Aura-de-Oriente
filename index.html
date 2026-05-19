@@ -403,8 +403,9 @@ tbody tr:hover td{background:var(--surf2)}
           <th onclick="srt('cmp-tbl',4)">Pres.</th>
           <th onclick="srt('cmp-tbl',5)">Uds Ped.</th>
           <th onclick="srt('cmp-tbl',6)">Total</th>
-          <th onclick="srt('cmp-tbl',7)">Estado</th>
-          <th onclick="srt('cmp-tbl',8)">Fecha Rec.</th>
+          <th onclick="srt('cmp-tbl',7)">Anticipo</th>
+          <th onclick="srt('cmp-tbl',8)">Estado</th>
+          <th onclick="srt('cmp-tbl',9)">Fecha Rec.</th>
           <th>Acciones</th>
         </tr></thead>
         <tbody id="cmp-tbody"></tbody>
@@ -743,7 +744,7 @@ tbody tr:hover td{background:var(--surf2)}
   </div>
   <div class="fg"><label>Producto del cat&#225;logo</label><select id="cp-prod"></select></div>
   <div class="f3">
-    <div class="fg"><label>Tipo *</label><select id="cp-tipo"><option>Perfume</option><option>Decant</option><option>Tester</option></select></div>
+    <div class="fg"><label>Tipo *</label><select id="cp-tipo"></select></div>
     <div class="fg"><label>Presentaci&#243;n *</label><select id="cp-pres"><option value="">--</option></select></div>
     <div class="fg"><label>Unidades</label><input type="number" id="cp-uds" value="1" min="1" oninput="calcTotalCompra()"></div>
   </div>
@@ -752,6 +753,10 @@ tbody tr:hover td{background:var(--surf2)}
     <div class="fg"><label>Total ($)</label><input type="number" id="cp-total" value="0" min="0"></div>
   </div>
   <div class="fg"><label>Notas</label><input type="text" id="cp-notas" placeholder="Observaciones..."></div>
+  <div class="f2">
+    <div class="fg"><label>Anticipo ($)</label><input type="number" id="cp-anticipo" value="0" min="0" oninput="toggleAnticipoPago()"></div>
+    <div class="fg" id="cp-anticipo-forma-row" style="display:none"><label>Forma de pago anticipo</label><select id="cp-anticipo-forma"></select></div>
+  </div>
   <div id="cp-razon-row" class="fg" style="display:none">
     <label>Raz&#243;n del cambio *</label>
     <input type="text" id="cp-razon" placeholder="Ej: Negoci&#233; mejor precio, cambio de presentaci&#243;n...">
@@ -786,7 +791,8 @@ tbody tr:hover td{background:var(--surf2)}
     <div class="fg"><label>Total venta ($)</label><input type="number" id="v-total" value="0" readonly style="background:var(--surf2)"></div>
   </div>
   <div class="f2">
-    <div class="fg"><label>Anticipo ($)</label><input type="number" id="v-ant" value="0" min="0" oninput="calcVentaTotal()"></div>
+    <div class="fg"><label>Anticipo ($)</label><input type="number" id="v-ant" value="0" min="0" oninput="calcVentaTotal();toggleVentaAntForma()"></div>
+    <div class="fg" id="v-ant-forma-row" style="display:none"><label>Forma de pago anticipo</label><select id="v-ant-forma"></select></div>
     <div class="fg"><label>Monto quincenal ($)</label><input type="number" id="v-quinc" value="200" min="0" oninput="renderCalPagos()"><div class="fn">Default $200</div></div>
   </div>
   <div class="fg"><label>Fecha primer pago</label><input type="date" id="v-fprimer" oninput="renderCalPagos()"></div>
@@ -847,7 +853,10 @@ tbody tr:hover td{background:var(--surf2)}
   <div class="mhdr"><h3>Registrar entrega</h3><button class="mx" onclick="closeM('m-entrega')">&#10005;</button></div>
   <input type="hidden" id="entrega-vid">
   <div style="background:var(--surf2);border-radius:var(--rs);padding:9px;font-size:13px;margin-bottom:10px" id="entrega-resumen"></div>
-  <div class="fg"><label>Unidades a entregar</label><input type="number" id="entrega-uds" value="1" min="1"><div class="fn" id="entrega-max"></div></div>
+  <div class="f2">
+    <div class="fg"><label>Unidades a entregar</label><input type="number" id="entrega-uds" value="1" min="1"><div class="fn" id="entrega-max"></div></div>
+    <div class="fg"><label>Fecha de entrega</label><input type="date" id="entrega-fecha"></div>
+  </div>
   <div style="background:rgba(42,95,95,.06);border:.5px solid rgba(42,95,95,.2);border-radius:var(--rs);padding:9px;font-size:11px;color:var(--mist)">
     El descuento priorizara primero unidades en consignaci&#243;n, luego propias.
   </div>
@@ -940,12 +949,10 @@ tbody tr:hover td{background:var(--surf2)}
   </div>
   <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
     <button class="btn btn-dark btn-sm" onclick="saveConfig()">&#128190; Guardar URL</button>
-    <button class="btn btn-outline btn-sm" onclick="testConnection()">&#9679; Probar conexi&#243;n</button>
-    <button class="btn btn-outline btn-sm" onclick="debugSheetHeaders()">&#128202; Verificar columnas</button>
-    <button class="btn btn-outline btn-sm" onclick="testUpsertImagen(DB.products[0]&&DB.products[0].id)">&#128270; Test upsert img</button>
     <button class="btn btn-gold btn-sm" onclick="loadFromGoogle()">&#8595; Cargar de Google</button>
-    <button class="btn btn-outline btn-sm" onclick="initSheets()">&#9881; Inicializar hojas</button>
     <button class="btn btn-outline btn-sm" onclick="saveToGoogle()">&#8593; Guardar en Google</button>
+    <button class="btn btn-outline btn-sm" onclick="testConnection()">&#9679; Probar conexi&#243;n</button>
+    <button class="btn btn-outline btn-sm" onclick="initSheets()">&#9881; Inicializar hojas</button>
   </div>
   <div id="sync-msg" style="font-size:12px;color:var(--mist);min-height:18px"></div>
   <div class="sdiv"><span>Datos de demostración</span></div>
@@ -1096,7 +1103,8 @@ const DEFAULT_LISTS={
   temporadas:['Primavera','Verano','Otoño','Invierno','Todo el año'],
   fuentes:['Oud Miraj','Fragrantica','Proveedor propio','Otro'],
   intensidades:['Ligera','Media','Alta','Fuerte'],
-  formas_pago:['Efectivo','Transferencia','Tarjeta']
+  formas_pago:['Efectivo','Transferencia','Tarjeta'],
+  tipos_producto:['Perfume','Decant','Tester']
 };
 function loadLists(){
   const s=localStorage.getItem('aura_lists');
@@ -1244,9 +1252,10 @@ function syncProviderTotals(){
     // Add manual adjustments on top
     (prov.historial||[]).filter(h=>h.tipo==='ajuste').forEach(a=>base+=(a.monto||0));
     prov.total=Math.max(0,base);
-    // Recalculate pagado from abonos in historial (single source of truth)
-    prov.pagado=(prov.historial||[]).filter(h=>h.tipo==='abono')
-      .reduce((a,h)=>a+(h.monto||0),0);
+    // Recalculate pagado from abonos in historial + anticipos from ALL purchases (pending or received)
+    const abonosHist=(prov.historial||[]).filter(h=>h.tipo==='abono').reduce((a,h)=>a+(h.monto||0),0);
+    const anticiposProv=DB.purchases.filter(c=>c.provId===prov.id&&(c.anticipo||0)>0).reduce((a,c)=>a+(c.anticipo||0),0);
+    prov.pagado=abonosHist+anticiposProv;
   });
 }
 function syncClientBalances(){
@@ -1280,11 +1289,16 @@ let SCRIPT_URL=localStorage.getItem('aura_script_url')||'';
 
 async function initSheets(){
   if(!SCRIPT_URL){toastMsg('Configura la URL primero','err');return;}
-  const structure={"productos": ["id", "nombre", "marca", "fuente", "precio", "concentracion", "genero", "familia", "uso", "temporada", "top", "cor", "fondo", "desc", "dur", "proy", "extra", "perfume_principal", "imarca", "inombre", "mio", "fav", "pros", "verificado", "no_vendible", "oculto", "img_id", "img_url", "imgs", "img_main_id", "origen_id"], "inventario": ["id", "pid", "nombre", "marca", "tipo", "pres", "stock", "costo", "precio", "nota", "consig", "cuds", "cprecio", "cprov", "ccom", "ccond", "cvenc", "comprometidas"], "ventas": ["id", "fecha", "cliente", "clienteId", "producto", "invId", "pkgId", "uds", "utype", "precioU", "descuento", "total", "pagado", "quinc", "prox", "entregadas", "esPaquete", "observaciones", "pagos", "pkgProds", "ajustes", "plan_pagos"], "clientes": ["id", "nombre", "tel", "ciudad", "notas", "compras", "saldo"], "proveedores": ["id", "nombre", "tel", "concepto", "total", "pagado", "tipo", "historial"], "compras": ["id", "fecha", "proveedor", "provId", "producto", "prodId", "tipo", "pres", "uds", "costo", "total", "notas", "estado", "fechaRec", "udsRecibidas", "motivoDiff", "confirmaciones"], "paquetes": ["id", "nombre", "desc", "precio", "normal", "prods", "status", "fechaIni", "fechaFin"], "pagos_proveedor": ["provId", "nombre", "fecha", "monto", "tipo", "motivo"], "listas": ["key", "valores"]};
   syncMsg('Inicializando hojas...','');
   try{
-    await gFetch(null,{action:'init_sheets',structure});
-    setSyncStatus('ok');syncMsg('Hojas listas','ok');toastMsg('Hojas inicializadas','ok');
+    // No pasamos structure — el Apps Script usa su propio SHEETS interno
+    // que ya tiene el guard para listas:null
+    const r=await gFetch(null,{action:'init_sheets'});
+    setSyncStatus('ok');
+    const created=(r&&r.created)||[];
+    const updated=(r&&r.updated)||[];
+    syncMsg('Hojas listas. Creadas: '+(created.join(',')||'ninguna')+' | Actualizadas: '+updated.join(','),'ok');
+    toastMsg('Hojas inicializadas','ok');
   }catch(e){setSyncStatus('error');syncMsg('Error: '+e.message,'err');}
 }
 function saveConfig(){
@@ -1482,6 +1496,7 @@ function normalizeVenta(v){
     entregadas:num(v.entregadas),quinc:num(v.quinc),
     esPaquete:boolVal(v.esPaquete),
     pagos:parseJSON(v.pagos,[]),pkgProds:parseJSON(v.pkgProds,[]),ajustes:parseJSON(v.ajustes,[]),
+    historial_entregas:parseJSON(v.historial_entregas,[]),
     observaciones:v.observaciones||'',plan_pagos:(parseJSON(v.plan_pagos,[])||[]).map(p=>({...p,fecha:normalizeDate(p.fecha)}))};
     // end normalizeVenta
 }
@@ -1497,6 +1512,8 @@ function normalizeCompra(c){
     fechaRec:c.fechaRec&&String(c.fechaRec).trim()!==''?normalizeDate(c.fechaRec):null,
     motivoDiff:c.motivoDiff||'',
     estado:c.estado||'pendiente',
+    anticipo:num(c.anticipo||0),
+    anticipo_forma:c.anticipo_forma||'',
     confirmaciones:(parseJSON(c.confirmaciones,[])||[]).map(x=>({...x,fecha:normalizeDate(x.fecha||'')}))  };
 }
 function normalizePkg(pk){
@@ -1599,7 +1616,8 @@ function buildExportData(){
         uds:v.uds,utype:v.utype,precioU:v.precioU,descuento:v.descuento||0,
         total:v.total,pagado:v.pagado,quinc:v.quinc||200,
         prox:v.prox,entregadas:v.entregadas||0,esPaquete:v.esPaquete?'TRUE':'FALSE',
-        observaciones:v.observaciones||'',pkgProds:j(v.pkgProds||[])
+        observaciones:v.observaciones||'',pkgProds:j(v.pkgProds||[]),
+        historial_entregas:j(v.historial_entregas||[])
       };
     }),
     clientes:DB.clients.map(c=>({id:c.id,nombre:c.nombre,tel:c.tel||'',ciudad:c.ciudad||'',notas:c.notas||'',compras:c.compras||0,saldo:c.saldo||0})),
@@ -1612,7 +1630,8 @@ function buildExportData(){
       producto:c.producto,prodId:c.prodId,tipo:c.tipo,pres:c.pres,
       uds:c.uds,costo:c.costo,total:c.total,notas:c.notas||'',
       estado:c.estado,fechaRec:c.fechaRec||'',
-      udsRecibidas:c.udsRecibidas||'',motivoDiff:c.motivoDiff||''
+      udsRecibidas:c.udsRecibidas||'',motivoDiff:c.motivoDiff||'',
+      anticipo:c.anticipo||0,anticipo_forma:c.anticipo_forma||''
     })),
     paquetes:DB.packages.map(pk=>({
       id:pk.id,nombre:pk.nombre,desc:pk.desc||'',precio:pk.precio,normal:pk.normal||0,
@@ -1802,8 +1821,11 @@ function openM(id){
     $$('cp-prov').innerHTML='<option value="">Selecciona...</option>'+DB.providers.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
     $$('cp-prod').innerHTML='<option value="">Selecciona...</option>'+DB.products.map(p=>`<option value="${p.id}">${p.nombre} (${arr(p.marca)[0]||p.marca})</option>`).join('');
     $$('cp-pres').innerHTML='<option value="">--</option>'+LISTS.presentaciones.map(v=>`<option>${v}</option>`).join('');
+    $$('cp-tipo').innerHTML=(LISTS.tipos_producto||['Perfume','Decant','Tester']).map(v=>`<option>${v}</option>`).join('');
+    $$('cp-anticipo-forma').innerHTML='<option value="">-- Forma de pago --</option>'+(LISTS.formas_pago||[]).map(f=>`<option>${f}</option>`).join('');
     if(!$$('cp-eid').value){
-      svDate('cp-fecha',TODAY);sv('cp-tipo','Perfume');sv('cp-pres','');sv('cp-uds','1');sv('cp-costo','0');sv('cp-total','0');sv('cp-notas','');sv('cp-razon','');
+      svDate('cp-fecha',TODAY);sv('cp-tipo',(LISTS.tipos_producto||['Perfume'])[0]);sv('cp-pres','');sv('cp-uds','1');sv('cp-costo','0');sv('cp-total','0');sv('cp-notas','');sv('cp-razon','');sv('cp-anticipo','0');sv('cp-anticipo-forma','');
+      const _afr=$$('cp-anticipo-forma-row');if(_afr)_afr.style.display='none';
       const h=$$('m-compra-new').querySelector('h3');if(h)h.textContent='Nueva compra / Pedido';
       const rf=$$('cp-razon-row');if(rf)rf.style.display='none';
       const db2=$$('cp-del-btn');if(db2)db2.style.display='none';
@@ -1817,6 +1839,8 @@ function openM(id){
       $$('v-cli').innerHTML='<option value="">Selecciona...</option>'+DB.clients.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
       buildVentaProductos();
       sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');sv('v-quinc','200');sv('v-precio-u','950');sv('v-obs','');
+      const _vaf=$$('v-ant-forma');if(_vaf){_vaf.innerHTML='<option value="">-- Selecciona --</option>'+(LISTS.formas_pago||[]).map(f=>`<option>${f}</option>`).join('');}
+      const _vafr=$$('v-ant-forma-row');if(_vafr)_vafr.style.display='none';
       calcVentaTotal();renderCalPagos();
     }catch(e){console.error('m-venta init error:',e);}
   }
@@ -3218,6 +3242,7 @@ const ADMIN_KEYS=[
   {key:'fuentes',label:'Fuente'},
   {key:'intensidades',label:'Intensidad'},
   {key:'formas_pago',label:'Formas de pago'},
+  {key:'tipos_producto',label:'Tipos de producto'},
 ];
 function renderAdmin(){
   $$('admin-lists').innerHTML=ADMIN_KEYS.map(({key,label})=>`
@@ -3234,12 +3259,21 @@ function renderAdmin(){
       </ul>
     </div>`).join('');
 }
+async function saveListsToGoogle(){
+  if(!SCRIPT_URL)return;
+  try{await gFetch(null,{action:'save_listas',data:LISTS});}
+  catch(e){console.warn('save_listas error',e);}
+}
 function addAdminItem(key){
   const inp=$$('ai-'+key);const v=(inp.value||'').trim();if(!v)return;
   if((LISTS[key]||[]).includes(v)){toastMsg('Ya existe','err');return;}
-  (LISTS[key]=LISTS[key]||[]).push(v);saveLists(LISTS);inp.value='';renderAdmin();toastMsg('Valor agregado','ok');
+  (LISTS[key]=LISTS[key]||[]).push(v);saveLists(LISTS);inp.value='';renderAdmin();
+  saveListsToGoogle().then(()=>toastMsg('Lista guardada','ok')).catch(()=>toastMsg('Guardado local OK','warn'));
 }
-function delAdminItem(key,val){LISTS[key]=(LISTS[key]||[]).filter(v=>v!==val);saveLists(LISTS);renderAdmin();toastMsg('Eliminado');}
+function delAdminItem(key,val){
+  LISTS[key]=(LISTS[key]||[]).filter(v=>v!==val);saveLists(LISTS);renderAdmin();
+  saveListsToGoogle().then(()=>toastMsg('Eliminado','ok')).catch(()=>toastMsg('Eliminado local','warn'));
+}
 
 // ═══════════════════════════════════════════════════════════
 //  EXCEL TEMPLATE & IMPORT
@@ -3454,10 +3488,10 @@ function exportAllData(){
   const ws1=toSheet(DB.products,p=>({...p,img:'[imagen]',imgs:'[imgs]',familia:arr(p.familia).join('|'),uso:arr(p.uso).join('|'),temporada:arr(p.temporada).join('|'),top:arr(p.top).join('|'),cor:arr(p.cor).join('|'),fondo:arr(p.fondo).join('|')}));
   if(ws1)XLSX.utils.book_append_sheet(wb,ws1,'productos');
   const ws2=toSheet(DB.inventory,i=>({...i,ajustes:j(i.ajustes||[])}));if(ws2)XLSX.utils.book_append_sheet(wb,ws2,'inventario');
-  const ws3=toSheet(DB.sales,v=>({...v,pagos:j(v.pagos||[]),pkgProds:j(v.pkgProds||[])}));if(ws3)XLSX.utils.book_append_sheet(wb,ws3,'ventas');
+  const ws3=toSheet(DB.sales,v=>({...v,pagos:j(v.pagos||[]),pkgProds:j(v.pkgProds||[]),historial_entregas:j(v.historial_entregas||[])}));if(ws3)XLSX.utils.book_append_sheet(wb,ws3,'ventas');
   const ws4=toSheet(DB.clients);if(ws4)XLSX.utils.book_append_sheet(wb,ws4,'clientes');
   const ws5=toSheet(DB.providers,p=>({...p,historial:j(p.historial||[])}));if(ws5)XLSX.utils.book_append_sheet(wb,ws5,'proveedores');
-  const ws6=toSheet(DB.purchases,c=>({...c,confirmaciones:j(c.confirmaciones||[])}));if(ws6)XLSX.utils.book_append_sheet(wb,ws6,'compras');
+  const ws6=toSheet(DB.purchases,c=>({...c,confirmaciones:j(c.confirmaciones||[]),anticipo:c.anticipo||0,anticipo_forma:c.anticipo_forma||''}));if(ws6)XLSX.utils.book_append_sheet(wb,ws6,'compras');
   const ws7=toSheet(DB.packages,pk=>({...pk,prods:j(pk.prods||[])}));if(ws7)XLSX.utils.book_append_sheet(wb,ws7,'paquetes');
   const ws8=toSheet(DB.payments_prov||[]);if(ws8)XLSX.utils.book_append_sheet(wb,ws8,'pagos_proveedor');
   const listsArr=Object.entries(LISTS).map(([k,v])=>({key:k,valores:v.join('|')}));
@@ -3475,10 +3509,10 @@ async function importAllData(e){
       const parse=str=>{try{return typeof str==='string'?JSON.parse(str||'[]'):str||[];}catch(e){return[];}};
       DB.products=get('productos').map(p=>({...p,img:null,imgs:parse(p.imgs)||[],familia:arr(p.familia),uso:arr(p.uso),temporada:arr(p.temporada),top:arr(p.top),cor:arr(p.cor),fondo:arr(p.fondo)}));
       DB.inventory=get('inventario').map(i=>normalizeInv(i));
-      DB.sales=get('ventas').map(v=>({...v,pagos:parse(v.pagos),pkgProds:parse(v.pkgProds)}));
+      DB.sales=get('ventas').map(v=>normalizeVenta({...v,pagos:parse(v.pagos),pkgProds:parse(v.pkgProds),historial_entregas:parse(v.historial_entregas||'[]')}));
       DB.clients=get('clientes');
       DB.providers=get('proveedores').map(p=>({...p,historial:parse(p.historial)}));
-      DB.purchases=get('compras').map(c=>({...c,confirmaciones:parse(c.confirmaciones)}));
+      DB.purchases=get('compras').map(c=>normalizeCompra({...c,confirmaciones:parse(c.confirmaciones||'[]'),anticipo:parseFloat(c.anticipo)||0,anticipo_forma:c.anticipo_forma||''}));
       DB.packages=get('paquetes').map(pk=>({...pk,prods:parse(pk.prods)}));
       DB.payments_prov=get('pagos_proveedor');
       const listas=get('listas');if(listas.length){listas.forEach(l=>{if(l.key&&l.valores)LISTS[l.key]=arr(l.valores);});saveLists(LISTS);}
@@ -3736,6 +3770,7 @@ function renderCompras(){
       <td>${c.pres}</td>
       <td>${c.uds}</td>
       <td>${fmt$(c.total)}</td>
+      <td style="font-size:11px">${c.anticipo>0?fmt$(c.anticipo)+(c.anticipo_forma?' <span class="tag">'+c.anticipo_forma+'</span>':''):'—'}</td>
       <td>${pill}</td>
       <td style="font-size:11px">${c.fechaRec?fmtDate(c.fechaRec):'—'}</td>
       <td style="white-space:nowrap">
@@ -3745,9 +3780,16 @@ function renderCompras(){
         ${c.estado!=='recibido'?`<button class="btn btn-danger btn-sm" onclick="deleteCompra(${c.id})" title="Eliminar pedido">&#128465;</button>`:''}
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="10"><div class="empty"><p>Sin compras</p></div></td></tr>';
+  }).join('')||'<tr><td colspan="11"><div class="empty"><p>Sin compras</p></div></td></tr>';
   $$('cmp-tbody'); // rendered above
   $$('cp-tot').textContent=tot;$$('cp-rec').textContent=rec;$$('cp-pend').textContent=pend;
+}
+
+function toggleAnticipoPago(){
+  const val=parseFloat(($$('cp-anticipo')||{}).value)||0;
+  const row=$$('cp-anticipo-forma-row');
+  if(row)row.style.display=val>0?'block':'none';
+  if(val===0&&$$('cp-anticipo-forma'))$$('cp-anticipo-forma').value='';
 }
 
 async function saveCompra(){
@@ -3761,6 +3803,8 @@ async function saveCompra(){
   const uds=parseInt(($$('cp-uds')||{}).value)||1;
   const costo=parseFloat(($$('cp-costo')||{}).value)||0;
   const total=parseFloat(($$('cp-total')||{}).value)||uds*costo;
+  const anticipo=parseFloat(($$('cp-anticipo')||{}).value)||0;
+  if(anticipo>0&&!cv('cp-anticipo-forma')){toastMsg('Selecciona la forma de pago del anticipo','err');return;}
   if(eid){
     const razon=(cv('cp-razon')||'').trim();
     if(!razon){toastMsg('Escribe la razón del cambio','err');return;}
@@ -3780,12 +3824,19 @@ async function saveCompra(){
       if(c.provId!==provId)cambios.push('Prov: '+c.proveedor+'→'+prov.nombre);
       c.provId=provId;c.proveedor=prov.nombre;c.prodId=prodId;c.producto=prod.nombre;
       c.tipo=cv('cp-tipo');c.pres=cv('cp-pres');c.uds=uds;c.costo=costo;c.total=total;c.notas=cv('cp-notas');
+      const nuevoAnticipo=parseFloat(($$('cp-anticipo')||{}).value)||0;
+      const nuevaForma=cv('cp-anticipo-forma')||'';
+      if(nuevoAnticipo!==c.anticipo)cambios.push('Anticipo: '+fmt$(c.anticipo||0)+'→'+fmt$(nuevoAnticipo));
+      if(nuevaForma!==(c.anticipo_forma||''))cambios.push('Forma anticipo: '+(c.anticipo_forma||'—')+'→'+nuevaForma);
+      c.anticipo=nuevoAnticipo;c.anticipo_forma=nuevaForma;
       if(!c.historial)c.historial=[];
       c.historial.push({fecha:TODAY,tipo:'edicion',cambios:cambios.join(', ')||'Sin cambios en campos clave',motivo:razon});
     }else{
       DB.purchases.push({id:NID++,fecha:cvDate('cp-fecha')||TODAY,
         proveedor:prov.nombre,provId,producto:prod.nombre,prodId,
         tipo:cv('cp-tipo'),pres:cv('cp-pres'),uds,costo,total,notas:cv('cp-notas'),
+        anticipo:parseFloat(($$('cp-anticipo')||{}).value)||0,
+        anticipo_forma:cv('cp-anticipo-forma')||'',
         estado:'pendiente',fechaRec:null,udsRecibidas:null,motivoDiff:'',confirmaciones:[],
         historial:[{fecha:TODAY,tipo:'creacion',cambios:'Pedido creado',motivo:'Registro inicial'}]});
     }
@@ -3810,8 +3861,12 @@ function editCompra(id){
   $$('cp-prov').innerHTML='<option value="">Selecciona...</option>'+DB.providers.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
   $$('cp-prod').innerHTML='<option value="">Selecciona...</option>'+DB.products.map(p=>`<option value="${p.id}">${p.nombre} (${arr(p.marca)[0]||p.marca})</option>`).join('');
   $$('cp-pres').innerHTML='<option value="">--</option>'+LISTS.presentaciones.map(v=>`<option>${v}</option>`).join('');
+  $$('cp-tipo').innerHTML=(LISTS.tipos_producto||['Perfume','Decant','Tester']).map(v=>`<option>${v}</option>`).join('');
+  $$('cp-anticipo-forma').innerHTML='<option value="">-- Forma de pago --</option>'+(LISTS.formas_pago||[]).map(f=>`<option>${f}</option>`).join('');
   $$('cp-prov').value=c.provId;$$('cp-prod').value=c.prodId;(function(){const _d=dateToISO(c.fecha);if(_d&&$$('cp-fecha'))$$('cp-fecha').value=_d;})();$$('cp-tipo').value=c.tipo;$$('cp-pres').value=c.pres;
   sv('cp-uds',c.uds);sv('cp-costo',c.costo);sv('cp-total',c.total);sv('cp-notas',c.notas||'');
+  sv('cp-anticipo',c.anticipo||0);sv('cp-anticipo-forma',c.anticipo_forma||'');
+  const _afr=$$('cp-anticipo-forma-row');if(_afr)_afr.style.display=(c.anticipo>0)?'block':'none';
   const h=$$('compra-form-title');if(h)h.textContent='Editar pedido';
   sv('cp-razon','');
   // Show razón field and delete button
@@ -3984,7 +4039,7 @@ async function confirmarRecepcion(id){
     _matchInv.ajustes.push({fecha:normalizeDate(fecha),stockAntes:_antes,stockDespues:_matchInv.stock,diferencia:udsRec,motivo:_invMotivo});
   }else{
     const prod=DB.products.find(p=>p.id===c.prodId);
-    const _precioSug=Math.round(costoUnit*1.5);  // uses corrected costoUnit
+    const _precioSug=prod&&prod.precio>0?prod.precio:Math.round(costoUnit*1.5);
     DB.inventory.push({id:NID++,pid:c.prodId,
       nombre:c.producto,marca:prod?arr(prod.marca)[0]||prod.marca||'':'',
       tipo:c.tipo,pres:c.pres,
@@ -4002,10 +4057,17 @@ async function confirmarRecepcion(id){
     if(hayAjuste)histMotivo+=' (pedido: '+udsPedidas_orig+' \u2014 diferencia: '+(udsRec-udsPedidas_orig)+' uds, monto: '+fmt$(montoReal)+')';
     if(motivo)histMotivo+=' | '+motivo;
     prov.historial.push({tipo:'compra_recibida',fecha:normalizeDate(fecha),monto:montoReal,motivo:histMotivo});
+    // Register anticipo as abono in historial if not already registered
+    if((c.anticipo||0)>0&&!c._anticipo_registrado){
+      prov.historial.push({tipo:'abono',fecha:c.fecha||normalizeDate(fecha),monto:c.anticipo,
+        forma:c.anticipo_forma||'',motivo:'Anticipo compra '+c.producto});
+      c._anticipo_registrado=true;
+    }
   }
 
   // STEP 5: Sync + Save
   syncMioFromInventory();syncProviderTotals();syncClientBalances();
+  _recibiendo=false;
   closeM('m-recibir');renderCompras();renderInv();renderProv();
   toastMsg('Recepción confirmada','ok');
   saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
@@ -4084,7 +4146,7 @@ function vRow(v){
         ${pend>0?`<button class="btn btn-wa btn-sm" onclick="waCobranza(${v.id})">WA</button>`:''}
         ${(v.entregadas||0)<v.uds?`<button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})">&#9999;</button>`:''}
         ${(v.pagos||[]).length>0?`<button class="btn btn-outline btn-sm" onclick="openPagosVenta(${v.id})" title="Ver pagos">Pagos</button>`:''}
-        ${(v.ajustes||[]).length>0?`<button class="btn btn-outline btn-sm" onclick="openHistorialVenta(${v.id})">Hist.</button>`:''}
+        ${(v.ajustes||[]).length>0||((v.historial_entregas||[]).length>0)?`<button class="btn btn-outline btn-sm" onclick="openHistorialVenta(${v.id})">Hist.</button>`:''}
         ${(v.entregadas||0)<v.uds?`<button class="btn btn-danger btn-sm" onclick="deleteVenta(${v.id})" title="Eliminar">&#128465;</button>`:''}
       </div>
     </td>
@@ -4132,6 +4194,9 @@ function renderCalPagos(){
   const cont=$$('v-cal-pagos');if(!cont)return;
   const total=parseFloat(($$('v-total')||{}).value)||0;
   const ant=parseFloat(($$('v-ant')||{}).value)||0;
+  const _vAntForma=($$('v-ant-forma')?.value||'').trim();
+  if(ant>0&&!_vAntForma){toastMsg('Selecciona la forma de pago del anticipo','err');
+    if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}return;}
   const quinc=parseFloat(($$('v-quinc')||{}).value)||200;
   const fprimer=cv('v-fprimer')||isoOffset(15);
   const saldo=total-ant;
@@ -4153,6 +4218,12 @@ function renderCalPagos(){
   </div>`;
 }
 
+function toggleVentaAntForma(){
+  const val=parseFloat(($$('v-ant')||{}).value)||0;
+  const row=$$('v-ant-forma-row');
+  if(row)row.style.display=val>0?'block':'none';
+  if(val===0&&$$('v-ant-forma'))$$('v-ant-forma').value='';
+}
 async function saveVenta(){
   const _btn$$=document.getElementById('btn-save-venta');
   if(_btn$$&&_btn$$.disabled)return;
@@ -4165,6 +4236,9 @@ async function saveVenta(){
   const desc=parseFloat(($$('v-desc')||{}).value)||0;
   const total=Math.max(0,uds*pu-desc);if(total<=0){toastMsg('Total debe ser mayor a 0','err');return;}
   const ant=parseFloat(($$('v-ant')||{}).value)||0;
+  const _vAntForma=($$('v-ant-forma')?.value||'').trim();
+  if(ant>0&&!_vAntForma){toastMsg('Selecciona la forma de pago del anticipo','err');
+    if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}return;}
   const quinc=parseFloat(($$('v-quinc')||{}).value)||200;
   const utype=cv('v-utype');
   const obs=cv('v-obs')||'';
@@ -4178,7 +4252,7 @@ async function saveVenta(){
     const venta={id:NID++,fecha:cv('v-fecha')||TODAY,cliente:cli.nombre,clienteId:cliId,
       producto:pkg.nombre,invId:null,pkgId,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:true,observaciones:obs,
-      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real',forma:''}]:[],pkgProds:pkg.prods,ajustes:[]};
+      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real',forma:_vAntForma}]:[],pkgProds:pkg.prods,ajustes:[]};
     pkg.prods.forEach(pp=>{const inv=DB.inventory.find(i=>i.id===pp.invId);if(inv)inv.comprometidas=(inv.comprometidas||0)+(pp.uds||1)*uds;});
     DB.sales.push(venta);
   }else{
@@ -4189,7 +4263,7 @@ async function saveVenta(){
       tipoProd:inv.tipo||'',presProd:inv.pres||'',marcaProd:arr(inv.marca)[0]||inv.marca||'',
       invId,pkgId:null,uds,utype,precioU:pu,descuento:desc,total,pagado:ant,quinc,
       prox:ant<total?fprimer:'-',entregadas:0,esPaquete:false,observaciones:obs,
-      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real',forma:''}]:[],pkgProds:[],ajustes:[]});
+      pagos:ant>0?[{fecha:TODAY,monto:ant,tipo:'real',forma:_vAntForma}]:[],pkgProds:[],ajustes:[]});
     inv.comprometidas=(inv.comprometidas||0)+uds;
   }
   syncClientBalances();saveDB();
@@ -4251,6 +4325,7 @@ function abrirEntrega(id){
   const max=v.uds-(v.entregadas||0);
   const eu=$$('entrega-uds');if(eu)eu.value=max;
   const em=$$('entrega-max');if(em)em.textContent='M\u00e1ximo: '+max+' unidades';
+  const ef=$$('entrega-fecha');if(ef)ef.value=TODAY_ISO;
   // Info sobre stock
   const er=$$('entrega-resumen');
   if(er){
@@ -4267,11 +4342,15 @@ function abrirEntrega(id){
 async function confirmarEntrega(){
   const _btn$$=document.getElementById('btn-confirmar-entrega');
   if(_btn$$&&_btn$$.disabled)return;
-  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando...';}
   const id=parseInt(cv('entrega-vid'));const v=DB.sales.find(x=>x.id===id);
   const uds=parseInt(($$('entrega-uds')||{}).value)||1;
+  const fechaEntrega=normalizeDate(cv('entrega-fecha')||TODAY_ISO);
   const max=v.uds-(v.entregadas||0);const ent=Math.min(uds,max);
   v.entregadas=(v.entregadas||0)+ent;
+  // Guardar historial de entregas con fecha
+  if(!v.historial_entregas)v.historial_entregas=[];
+  v.historial_entregas.push({fecha:fechaEntrega,uds:ent});
   // Priorizar consignación primero, luego propio
   function descontarInv(inv,q,ventaInfo){
     if(!inv||q<=0)return;
@@ -4285,7 +4364,7 @@ async function confirmarEntrega(){
     // Register adjustment in inventory history
     if(!inv.ajustes)inv.ajustes=[];
     const totalDesc=stockAntes-inv.stock+(cudsAntes-(inv.cuds||0));
-    if(totalDesc!==0)inv.ajustes.push({fecha:TODAY,stockAntes,stockDespues:inv.stock,
+    if(totalDesc!==0)inv.ajustes.push({fecha:fechaEntrega,stockAntes,stockDespues:inv.stock,
       diferencia:-totalDesc,motivo:'Entrega venta'+(ventaInfo?' — '+ventaInfo:'')});
   }
   if(v.esPaquete&&v.pkgProds){
@@ -4696,8 +4775,12 @@ function abonarProv(id){
     +'<div class="fg"><label>Monto del abono ($)</label>'
     +'<input type="number" id="ab-monto" placeholder="0.00" step="0.01" max="'+saldo+'">'
     +'<div class="fn">Máximo: '+fmt$(saldo)+'</div></div>'
+    +'<div class="fg"><label>Forma de pago *</label>'
+    +'<select id="ab-forma"><option value="">-- Selecciona --</option>'
+    +(LISTS.formas_pago||['Efectivo','Transferencia','Tarjeta']).map(f=>'<option>'+f+'</option>').join('')
+    +'</select></div>'
     +'<div class="fg"><label>Motivo / referencia</label>'
-    +'<input type="text" id="ab-motivo" placeholder="Ej: Transferencia SPEI, efectivo..."></div>'
+    +'<input type="text" id="ab-motivo" placeholder="Ej: N\u00fam. transferencia, recibo..."></div>'
     +'<div class="mfoot">'
     +'<button class="btn btn-outline" onclick="closeM(\'m-recibir\')">Cancelar</button>'
     +'<button class="btn btn-gold" onclick="confirmarAbonoProv('+id+')">Registrar abono</button>'
@@ -4712,12 +4795,15 @@ async function confirmarAbonoProv(id){
   if(!monto||monto<=0){toastMsg('Ingresa un monto válido','err');return;}
   const saldo=p.total-p.pagado;
   if(monto>saldo){toastMsg('El abono no puede superar el saldo','err');return;}
-  const motivo=($$('ab-motivo')?.value||'Abono manual').trim();
+  const forma=($$('ab-forma')?.value||'').trim();
+  if(!forma){toastMsg('Selecciona la forma de pago','err');_abonando=false;return;}
+  const motivo=($$('ab-motivo')?.value||'').trim();
   p.pagado=(p.pagado||0)+monto;
   p.historial=(p.historial||[]);
-  p.historial.push({tipo:'abono',fecha:TODAY,monto,motivo});
+  p.historial.push({tipo:'abono',fecha:TODAY,monto,forma,motivo});
   DB.payments_prov=(DB.payments_prov||[]);
-  DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',motivo});
+  DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',forma,motivo});
+  _abonando=false;
   closeM('m-recibir');
   syncProviderTotals();renderProv();toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
   saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
@@ -4784,10 +4870,11 @@ function openProvDetalle(id){
     +'<div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Historial de movimientos</div>'
     +'<div style="overflow-x:auto;overflow-y:auto;max-height:50vh">'
     +(!hist.length?'<div class="empty"><p>Sin historial</p></div>'
-      :'<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Motivo</th></tr></thead><tbody>'
+      :'<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Forma pago</th><th>Monto</th><th>Motivo</th></tr></thead><tbody>'
       +hist.slice().reverse().map(h=>'<tr>'
         +'<td style="font-size:11px">'+fmtDate(h.fecha)+'</td>'
         +'<td><span class="tag">'+h.tipo+'</span></td>'
+        +'<td style="font-size:11px">'+(h.forma||'—')+'</td>'
         +'<td style="font-weight:500;color:'+(h.tipo==='abono'?'var(--ok)':'var(--err)')+'">'+(h.tipo==='abono'?'−':'+')+''+fmt$(Math.abs(h.monto||0))+'</td>'
         +'<td style="font-size:11px;color:var(--mist)">'+(h.motivo||'')+'</td>'
         +'</tr>').join('')
@@ -5023,12 +5110,14 @@ function renderReporte(){
       <div class="sc sc-ok"><div class="sc-l">Recibidos</div><div class="sc-v">${rec}</div></div>
       <div class="sc sc-err"><div class="sc-l">Pendientes</div><div class="sc-v">${list.length-rec}</div></div>
       <div class="sc"><div class="sc-l">Monto total</div><div class="sc-v" style="font-size:14px">${fmt$(totP)}</div></div>`;
-    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Uds</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Costo u.</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Total</th><th onclick="srtTbl(this)" style="cursor:pointer">Estado</th></tr>';
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Producto</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Uds</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Costo u.</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Total</th><th onclick="srtTbl(this)" style="cursor:pointer;text-align:right">Anticipo</th><th onclick="srtTbl(this)" style="cursor:pointer">F.Pago Ant.</th><th onclick="srtTbl(this)" style="cursor:pointer">Estado</th></tr>';
     tbody.innerHTML=list.map(c=>`<tr>
       <td>${fmtDate(c.fecha)}</td><td>${c.proveedor}</td><td>${c.producto}</td>
       <td>${c.tipo}</td><td>${c.pres}</td><td>${c.uds}</td><td>${fmt$(c.costo)}</td><td>${fmt$(c.total)}</td>
+      <td style="text-align:right">${c.anticipo>0?fmt$(c.anticipo):'—'}</td>
+      <td>${c.anticipo_forma||'—'}</td>
       <td>${c.estado==='recibido'?'<span class="pill p-ok">Recibido</span>':'<span class="pill p-warn">Pendiente</span>'}</td>
-    </tr>`).join('')||'<tr><td colspan="9"><div class="empty"><p>Sin datos</p></div></td></tr>';
+    </tr>`).join('')||'<tr><td colspan="11"><div class="empty"><p>Sin datos</p></div></td></tr>';
   }
   else if(curReporte==='pagos-prov'){
     let list=(DB.payments_prov||[]).filter(p=>{
@@ -5078,20 +5167,26 @@ function renderReporte(){
       if(marcaProdFilt&&pv.nombre!==marcaProdFilt)return false;
       if(tipoPagoFilt&&tipoPagoFilt!=='abono')return false;
       return true;
-    }).flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono').map(h=>({fecha:h.fecha,nombre:pv.nombre,monto:h.monto,tipo:'abono',tipoProd:'',presProd:'',motivo:h.motivo||''})));
-    const _all10=[..._rcv,..._abn]
+    }).flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono').map(h=>({fecha:h.fecha,nombre:pv.nombre,monto:h.monto,tipo:'abono',forma:h.forma||'',tipoProd:'',presProd:'',motivo:h.motivo||''})));
+    // Include anticipos from compras in the movement list
+    const _ant=DB.purchases.filter(c=>(c.anticipo||0)>0&&c.provId&&(!provId||c.provId===provId)
+      &&(!desde||dateToISO(c.fecha)>=desde)&&(!hasta||dateToISO(c.fecha)<=hasta))
+      .map(c=>({fecha:c.fecha,nombre:c.proveedor||'',monto:c.anticipo,tipo:'anticipo',
+        forma:c.anticipo_forma||'',tipoProd:c.tipo||'',presProd:c.pres||'',motivo:'Anticipo: '+c.producto}));
+    const _all10=[..._rcv,..._abn,..._ant]
       .filter(r=>(!desde||dateToISO(r.fecha)>=desde)&&(!hasta||dateToISO(r.fecha)<=hasta))
       .sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||'')).slice(0,50);
-    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo prod.</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Detalle</th></tr>';
+    thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Forma pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo prod.</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Detalle</th></tr>';
     tbody.innerHTML=_all10.map(r=>`<tr>
       <td style="font-size:11px">${fmtDate(r.fecha)}</td>
       <td style="font-weight:500">${r.nombre||'&mdash;'}</td>
       <td><span class="tag">${r.tipo}</span></td>
+      <td style="font-size:11px">${r.forma||'—'}</td>
       <td style="font-size:11px">${r.tipoProd||'&mdash;'}</td>
       <td style="font-size:11px">${r.presProd||'&mdash;'}</td>
-      <td style="text-align:right;color:${r.tipo==='abono'?'var(--ok)':'var(--err)'}">${r.tipo==='abono'?'-':'+'} ${fmt$(Math.abs(r.monto||0))}</td>
+      <td style="text-align:right;color:${r.tipo==='abono'||r.tipo==='anticipo'?'var(--ok)':'var(--err)'}">${r.tipo==='compra_recibida'?'+':'-'} ${fmt$(Math.abs(r.monto||0))}</td>
       <td style="font-size:11px;color:var(--mist)">${r.motivo}</td>
-    </tr>`).join('')||'<tr><td colspan="5"><div class="empty"><p>Sin movimientos</p></div></td></tr>';
+    </tr>`).join('')||'<tr><td colspan="8"><div class="empty"><p>Sin movimientos</p></div></td></tr>';
   }
   else if(curReporte==='ventas'){
     let list=DB.sales.filter(v=>{
