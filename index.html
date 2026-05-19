@@ -576,8 +576,13 @@ tbody tr:hover td{background:var(--surf2)}
 
     <!-- ═══ ADMINISTRACIÓN ═══ -->
     <div id="s-admin" class="sec">
-      <div class="sh"><div class="sh-l"><h2>Administraci&oacute;n</h2><p>Gestiona las listas desplegables</p></div><div class="sh-a"><button class="btn btn-outline btn-sm" onclick="recargarListas()" id="btn-reload-lists">↻ Recargar listas</button></div></div>
-      <div id="admin-lists"></div>
+      <div class="sh"><div class="sh-l"><h2>Administraci&oacute;n</h2><p>Gestiona las listas desplegables de la app</p></div><div class="sh-a"><button class="btn btn-outline btn-sm" onclick="recargarListas()" id="btn-reload-lists">&#8635; Recargar</button></div></div>
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;min-height:500px" id="admin-wrap">
+        <div style="background:var(--surf2);border-radius:var(--r);border:.5px solid var(--bord);overflow-y:auto;max-height:72vh" id="admin-sidebar"></div>
+        <div style="background:var(--surf2);border-radius:var(--r);border:.5px solid var(--bord);padding:18px" id="admin-panel">
+          <div style="color:var(--mist);text-align:center;padding:40px 0;font-size:13px">&#8592; Selecciona una lista para editarla</div>
+        </div>
+      </div>
     </div>
 
   </div><!-- /content -->
@@ -694,7 +699,7 @@ tbody tr:hover td{background:var(--surf2)}
   <input type="hidden" id="inv-eid">
   <div class="fg"><label>Perfume (Producto Principal)</label><select id="inv-prod"></select></div>
   <div class="f2">
-    <div class="fg"><label>Tipo *</label><select id="inv-tipo"><option>Perfume</option><option>Decant</option><option>Tester</option></select></div>
+    <div class="fg"><label>Tipo *</label><select id="inv-tipo"></select></div>
     <div class="fg"><label>Presentaci&#243;n *</label><select id="inv-pres"><option value="">--</option></select></div>
   </div>
   <div class="f2">
@@ -1544,7 +1549,8 @@ function buildExportData(){
   DB.providers.forEach(p=>{
     (p.historial||[]).forEach(h=>historial_prov.push({
       provId:p.id,proveedor:p.nombre,
-      fecha:h.fecha,tipo:h.tipo,monto:h.monto||0,motivo:h.motivo||''
+      fecha:h.fecha,tipo:h.tipo,monto:h.monto||0,
+      forma:h.forma||'',motivo:h.motivo||''
     }));
   });
 
@@ -3244,20 +3250,45 @@ const ADMIN_KEYS=[
   {key:'formas_pago',label:'Formas de pago'},
   {key:'tipos_producto',label:'Tipos de producto'},
 ];
+let _adminKey=null;
 function renderAdmin(){
-  $$('admin-lists').innerHTML=ADMIN_KEYS.map(({key,label})=>`
-    <div style="margin-bottom:20px">
-      <div class="sh" style="margin-bottom:8px">
-        <div class="sh-l"><h3 style="font-size:16px">${label}</h3></div>
-        <div style="display:flex;gap:5px">
-          <input type="text" id="ai-${key}" placeholder="Nuevo valor..." style="padding:5px 8px;border:.5px solid var(--bord2);border-radius:var(--rs);font-size:12px;font-family:'Jost',sans-serif;background:var(--surf);color:var(--ink)">
-          <button class="btn btn-gold btn-sm" onclick="addAdminItem('${key}')">+</button>
-        </div>
-      </div>
-      <ul class="admin-list" id="al-${key}">
-        ${(LISTS[key]||[]).map(v=>`<li><span class="li-val">${v}</span><button class="li-del" onclick="delAdminItem('${key}','${v.replace(/'/g,'\\\'')}')">\xd7</button></li>`).join('')}
-      </ul>
-    </div>`).join('');
+  const sb=$$('admin-sidebar');if(!sb)return;
+  sb.innerHTML=ADMIN_KEYS.map(({key,label})=>{
+    const active=key===_adminKey;
+    const count=(LISTS[key]||[]).length;
+    return `<div onclick="selectAdminList('${key}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;border-left:3px solid ${active?'var(--gold)':'transparent'};background:${active?'var(--surf3)':'transparent'};font-size:13px;color:${active?'var(--ink)':'var(--mist)'};transition:all .15s">
+      <span style="font-weight:${active?'600':'400'}">${label}</span>
+      <span style="font-size:11px;background:var(--surf3);border-radius:10px;padding:1px 7px;color:var(--mist)">${count}</span>
+    </div>`;
+  }).join('');
+  if(_adminKey) renderAdminPanel(_adminKey);
+}
+function selectAdminList(key){
+  _adminKey=key;renderAdmin();
+}
+function renderAdminPanel(key){
+  const panel=$$('admin-panel');if(!panel)return;
+  const meta=ADMIN_KEYS.find(a=>a.key===key);if(!meta)return;
+  const items=LISTS[key]||[];
+  panel.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="font-size:17px;margin:0">${meta.label}</h3>
+      <span style="font-size:12px;color:var(--mist)">${items.length} valor${items.length===1?'':'es'}</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input type="text" id="ai-${key}" placeholder="Nuevo valor..." style="flex:1;padding:8px 10px;border:.5px solid var(--bord2);border-radius:var(--rs);font-size:13px;font-family:'Jost',sans-serif;background:var(--surf);color:var(--ink)" onkeydown="if(event.key==='Enter')addAdminItem('${key}')">
+      <button class="btn btn-gold" onclick="addAdminItem('${key}')">+ Agregar</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:7px" id="al-${key}">
+      ${items.map((v,idx)=>`
+        <div style="display:flex;align-items:center;gap:6px;background:var(--surf);border:.5px solid var(--bord);border-radius:var(--rs);padding:7px 10px">
+          <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${v}">${v}</span>
+          <button onclick="delAdminItem('${key}','${v.replace(/'/g,"\\'")}')"
+            style="border:none;background:none;color:var(--mist);cursor:pointer;font-size:15px;padding:0 2px;line-height:1;flex-shrink:0" title="Eliminar">&times;</button>
+        </div>`).join('')}
+    </div>
+    ${items.length===0?'<div style="color:var(--mist);font-size:13px;text-align:center;padding:30px 0">Lista vacía — agrega el primer valor</div>':''}
+  `;
 }
 async function saveListsToGoogle(){
   if(!SCRIPT_URL)return;
@@ -3620,6 +3651,7 @@ function openAddInv(){
   $$('inv-del-btn').style.display='none';
   $$('inv-prod').innerHTML='<option value="">Selecciona...</option>'+DB.products.map(p=>`<option value="${p.id}">${p.nombre} (${arr(p.marca)[0]||p.marca})</option>`).join('');
   $$('inv-pres').innerHTML='<option value="">--</option>'+LISTS.presentaciones.map(v=>`<option>${v}</option>`).join('');
+  $$('inv-tipo').innerHTML=(LISTS.tipos_producto||['Perfume','Decant','Tester']).map(v=>`<option>${v}</option>`).join('');
   sv('inv-stock','0');sv('inv-costo','0');sv('inv-precio','950');sv('inv-nota','');sv('inv-motivo','');
   consigOn=false;$$('consig-tw2').classList.remove('on');$$('consig-form').style.display='none';
   sv('inv-cuds','0');sv('inv-cprecio','950');sv('inv-cprov','');sv('inv-ccom','20');sv('inv-ccond','');sv('inv-cvenc','');
@@ -3633,6 +3665,7 @@ function editInv(id){
   $$('inv-del-btn').style.display='inline-flex';
   $$('inv-prod').innerHTML='<option value="">Selecciona...</option>'+DB.products.map(p=>`<option value="${p.id}">${p.nombre} (${arr(p.marca)[0]||p.marca})</option>`).join('');
   $$('inv-pres').innerHTML='<option value="">--</option>'+LISTS.presentaciones.map(v=>`<option>${v}</option>`).join('');
+  $$('inv-tipo').innerHTML=(LISTS.tipos_producto||['Perfume','Decant','Tester']).map(v=>`<option>${v}</option>`).join('');
   $$('inv-prod').value=i.pid;$$('inv-tipo').value=i.tipo;$$('inv-pres').value=i.pres;
   sv('inv-stock',i.stock);sv('inv-costo',i.costo);sv('inv-precio',i.precio);sv('inv-nota',i.nota||'');sv('inv-motivo','');
   consigOn=!!(i.consig);
@@ -4772,9 +4805,12 @@ function abonarProv(id){
     +'<div style="background:var(--surf2);border-radius:var(--rs);padding:9px 12px;margin-bottom:12px;font-size:13px">'
     +'<strong>'+p.nombre+'</strong><br>'
     +'<span style="color:var(--mist);font-size:12px">Saldo pendiente: '+fmt$(saldo)+'</span></div>'
+    +'<div class="f2">'
     +'<div class="fg"><label>Monto del abono ($)</label>'
     +'<input type="number" id="ab-monto" placeholder="0.00" step="0.01" max="'+saldo+'">'
-    +'<div class="fn">Máximo: '+fmt$(saldo)+'</div></div>'
+    +'<div class="fn">M\u00e1ximo: '+fmt$(saldo)+'</div></div>'
+    +'<div class="fg"><label>Fecha del abono *</label>'
+    +'<input type="date" id="ab-fecha" value="'+TODAY_ISO+'"></div></div>'
     +'<div class="fg"><label>Forma de pago *</label>'
     +'<select id="ab-forma"><option value="">-- Selecciona --</option>'
     +(LISTS.formas_pago||['Efectivo','Transferencia','Tarjeta']).map(f=>'<option>'+f+'</option>').join('')
@@ -4797,12 +4833,14 @@ async function confirmarAbonoProv(id){
   if(monto>saldo){toastMsg('El abono no puede superar el saldo','err');return;}
   const forma=($$('ab-forma')?.value||'').trim();
   if(!forma){toastMsg('Selecciona la forma de pago','err');_abonando=false;return;}
+  const fechaAbono=normalizeDate(cv('ab-fecha')||TODAY_ISO);
+  if(!fechaAbono){toastMsg('Ingresa la fecha del abono','err');_abonando=false;return;}
   const motivo=($$('ab-motivo')?.value||'').trim();
   p.pagado=(p.pagado||0)+monto;
   p.historial=(p.historial||[]);
-  p.historial.push({tipo:'abono',fecha:TODAY,monto,forma,motivo});
+  p.historial.push({tipo:'abono',fecha:fechaAbono,monto,forma,motivo});
   DB.payments_prov=(DB.payments_prov||[]);
-  DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:TODAY,monto,tipo:'abono',forma,motivo});
+  DB.payments_prov.push({provId:id,nombre:p.nombre,fecha:fechaAbono,monto,tipo:'abono',forma,motivo});
   _abonando=false;
   closeM('m-recibir');
   syncProviderTotals();renderProv();toastMsg('Abono de '+fmt$(monto)+' registrado','ok');
