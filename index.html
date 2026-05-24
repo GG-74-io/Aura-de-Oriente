@@ -310,9 +310,9 @@ tbody tr:hover td{background:var(--surf2)}
     <!-- ═══ MIS PRODUCTOS ═══ -->
     <div id="s-mis-prod" class="sec">
       <div class="sh">
-        <div class="sh-l"><h2>Mis Productos</h2><p>Solo perfumes en "Mi negocio" &mdash; <span id="mis-count-total">0</span> producto(s)</p></div>
+        <div class="sh-l"><h2>Mis Productos</h2><p>Solo perfumes en "Mi negocio" &mdash; <span id="mis-count-filtered">0</span> / <span id="mis-count-total">0</span> producto(s)</p></div>
         <div class="sh-a">
-          <select id="mis-sort-field" onchange="renderMis()" style="font-size:11px;padding:3px 5px"><option value="">Ordenar...</option><option value="nombre">Nombre</option><option value="precio">Precio</option><option value="marca">Marca</option><option value="genero">Género</option><option value="familia">Familia</option><option value="concentracion">Concentración</option><option value="imarca">Inspiración</option><option value="proy">Proyección</option><option value="dur">Duración</option><option value="intensidad">Intensidad</option></select>
+          <select id="mis-sort-field" onchange="renderMis()" style="font-size:11px;padding:3px 5px"><option value="">Ordenar...</option><option value="gsheet">GSheet</option><option value="captura">Captura</option><option value="nombre">Nombre</option><option value="precio">Precio</option><option value="marca">Marca</option><option value="genero">Género</option><option value="familia">Familia</option><option value="concentracion">Concentración</option><option value="imarca">Inspiración</option><option value="proy">Proyección</option><option value="dur">Duración</option><option value="intensidad">Intensidad</option></select>
           <select id="mis-sort-dir" onchange="renderMis()" style="font-size:11px;padding:3px 5px"><option value="asc">A↑</option><option value="desc">Z↓</option></select>
           <button class="btn btn-outline btn-sm" onclick="openCompare()">&#9878; Comparar</button>
           <button class="btn btn-outline btn-sm" onclick="exportMisPDF()">PDF</button>
@@ -2296,7 +2296,8 @@ function filterCatalog(){
     if(_sf==='precio')return _sd==='asc'?va-vb:vb-va;
     return _sd==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
   });
-  $$('cat-count').textContent=list.length+' perfumes';
+  const _catTot=DB.products.length;
+  $$('cat-count').textContent=list.length<_catTot?(list.length+' / '+_catTot+' perfumes'):(list.length+' perfumes');
   renderCards(list,'pgrid');
 }
 function clearCatFilter(){
@@ -2723,12 +2724,19 @@ function renderMis(){
        arr(p.familia).join(' ')].join(' ').toLowerCase().includes(q))return false;
     return true;
   });
-  // Update count
+  // Update count — filtered / total
   const _misTot=DB.products.filter(p=>p.mio&&!p.oculto).length;
   const _cntEl=$$('mis-count-total');if(_cntEl)_cntEl.textContent=_misTot;
+  const _cntFil=$$('mis-count-filtered');if(_cntFil)_cntFil.textContent=list.length;
   // Sort
   const _msf=$$('mis-sort-field')?.value,_msd=$$('mis-sort-dir')?.value||'asc';
-  if(_msf){
+  if(_msf==='gsheet'){
+    // Order as they appear in DB.products array (=GSheet row order)
+    const _gsIdx={}; DB.products.forEach((p,i)=>{_gsIdx[p.id]=i;});
+    list.sort((a,b)=>_msd==='asc'?_gsIdx[a.id]-_gsIdx[b.id]:_gsIdx[b.id]-_gsIdx[a.id]);
+  } else if(_msf==='captura'){
+    list.sort((a,b)=>_msd==='asc'?a.id-b.id:b.id-a.id);
+  } else if(_msf){
     list.sort((a,b)=>{
       const va=_msf==='precio'?(a.precio||0):_msf==='familia'?arr(a.familia).join():_msf==='marca'?(arr(a.marca)[0]||''):_msf==='imarca'?(a.imarca||''):(a[_msf]||'');
       const vb=_msf==='precio'?(b.precio||0):_msf==='familia'?arr(b.familia).join():_msf==='marca'?(arr(b.marca)[0]||''):_msf==='imarca'?(b.imarca||''):(b[_msf]||'');
@@ -2799,7 +2807,7 @@ function clearMisFilter(){
   sv('mq','');
   ['mq-marca','mq-genero','mq-familia','mq-inspo','mq-uso','mq-estado','mq-exist',
    'mq-top','mq-cor','mq-fondo','mq-conc','mq-dur','mq-proy','mq-intens','mq-temp',
-   'mis-sort-field']
+   'mis-sort-field','mis-sort-dir']
   .forEach(id=>{const e=$$(id);if(e)e.selectedIndex=0;});
   renderMis();
 }
@@ -2808,18 +2816,27 @@ function exportMisPDF(){
   if(!window.jspdf){toastMsg('Librer\u00eda PDF no disponible','err');return;}
   const {jsPDF}=window.jspdf;
 
-  // ── Gather filtered list ──────────────────────────────────────────────
+  // ── Gather filtered+sorted list — mirrors renderMis exactly ─────────
   const q=(cv('mq')||'').toLowerCase();
-  const fm=cv('mq-marca'),fg=cv('mq-genero'),ffa=cv('mq-familia'),ex=cv('mq-exist');
-  // Row-2 filters
+  const fm=cv('mq-marca'),fg=cv('mq-genero'),ffa=cv('mq-familia');
+  const fi=cv('mq-inspo'),fu=cv('mq-uso'),fe=cv('mq-estado'),ex=cv('mq-exist');
   const _ptop=$$('mq-top')?.value||'',_pcor=$$('mq-cor')?.value||'';
   const _pfondo=$$('mq-fondo')?.value||'',_pconc=$$('mq-conc')?.value||'';
-  const _pdur=$$('mq-dur')?.value||'',_pproy=$$('mq-proy')?.value||'',_ptemp=$$('mq-temp')?.value||'';
+  const _pdur=$$('mq-dur')?.value||'',_pproy=$$('mq-proy')?.value||'';
+  const _pintens=$$('mq-intens')?.value||'',_ptemp=$$('mq-temp')?.value||'';
   const list=DB.products.filter(p=>{
     if(!p.mio||p.oculto)return false;
     if(fm&&!arr(p.marca).includes(fm))return false;
     if(fg&&p.genero!==fg)return false;
     if(ffa&&!arr(p.familia).includes(ffa))return false;
+    if(fi&&p.imarca!==fi)return false;
+    if(fu&&!arr(p.uso).includes(fu))return false;
+    if(fe==='mio'&&!p.mio)return false;
+    if(fe==='fav'&&!p.fav)return false;
+    if(fe==='pros'&&!p.pros)return false;
+    if(fe==='ver'&&!p.verificado)return false;
+    if(fe==='nv'&&!p.no_vendible)return false;
+    if(fe==='oculto'&&!p.oculto)return false;
     if(ex==='1'&&getExistenciaForProd(p.id)<=0)return false;
     if(_ptop&&!arr(p.top).includes(_ptop))return false;
     if(_pcor&&!arr(p.cor).includes(_pcor))return false;
@@ -2827,11 +2844,30 @@ function exportMisPDF(){
     if(_pconc&&p.concentracion!==_pconc)return false;
     if(_pdur&&p.dur!==_pdur)return false;
     if(_pproy&&p.proy!==_pproy)return false;
+    if(_pintens&&p.intensidad!==_pintens)return false;
     if(_ptemp&&!arr(p.temporada).includes(_ptemp))return false;
-    if(q&&![p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',
-       ...arr(p.top),...arr(p.cor),...arr(p.fondo)].join(' ').toLowerCase().includes(q))return false;
+    if(q&&![p.clave||'',p.nombre,arr(p.marca).join(' '),p.desc||'',p.inombre||'',p.imarca||'',
+       p.perfume_principal||'',p.intensidad||'',p.extra||'',String(p.precio||''),
+       ...arr(p.top),...arr(p.cor),...arr(p.fondo),p.concentracion||'',
+       p.dur||'',p.proy||'',arr(p.temporada).join(' '),arr(p.uso).join(' '),
+       arr(p.familia).join(' ')].join(' ').toLowerCase().includes(q))return false;
     return true;
   });
+  // Apply same sort as screen
+  const _msf=$$('mis-sort-field')?.value,_msd=$$('mis-sort-dir')?.value||'asc';
+  if(_msf==='gsheet'){
+    const _gsIdx={}; DB.products.forEach((p,i)=>{_gsIdx[p.id]=i;});
+    list.sort((a,b)=>_msd==='asc'?_gsIdx[a.id]-_gsIdx[b.id]:_gsIdx[b.id]-_gsIdx[a.id]);
+  } else if(_msf==='captura'){
+    list.sort((a,b)=>_msd==='asc'?a.id-b.id:b.id-a.id);
+  } else if(_msf){
+    list.sort((a,b)=>{
+      const va=_msf==='precio'?(a.precio||0):_msf==='familia'?arr(a.familia).join():_msf==='marca'?(arr(a.marca)[0]||''):_msf==='imarca'?(a.imarca||''):(a[_msf]||'');
+      const vb=_msf==='precio'?(b.precio||0):_msf==='familia'?arr(b.familia).join():_msf==='marca'?(arr(b.marca)[0]||''):_msf==='imarca'?(b.imarca||''):(b[_msf]||'');
+      if(_msf==='precio')return _msd==='asc'?va-vb:vb-va;
+      return _msd==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    });
+  }
   if(!list.length){toastMsg('No hay productos para exportar','err');return;}
   toastMsg('Generando PDF...','ok');
 
@@ -2934,18 +2970,23 @@ function exportMisPDF(){
     // Inspiracion
     if(MIS_FIELDS.inspiracion&&p.inombre){
       doc.setFontSize(8);doc.setFont(undefined,'italic');doc.setTextColor(...GOLD);
-      doc.text('\u2248 '+p.imarca+' '+p.inombre,txtX,cy);cy+=4.5;
+      doc.text('~ '+p.imarca+' '+p.inombre,txtX,cy);cy+=4.5;
     }
 
     // Divider
     divider(cy,txtX,W-MR);cy+=4;
 
-    // Description — carefully clipped, no letter-spacing
+    // Description — full text, no clipping
     if(MIS_FIELDS.descripcion&&p.desc){
       secLabel('Descripcion',txtX,cy);cy+=3.5;
-      const maxDescH=Math.min(18, slotY+slotH-cy-30);
-      const used=textBox(p.desc,txtX,cy,txtW,maxDescH,7.5,INK,false);
-      cy+=used+3;
+      doc.setFontSize(7.5);doc.setFont(undefined,'normal');doc.setTextColor(...INK);
+      const _descLines=doc.splitTextToSize(String(p.desc),txtW);
+      const _descLH=7.5*0.4;
+      _descLines.forEach(ln=>{
+        if(cy>slotY+slotH-8){/* overflow onto next slot handled by page layout */}
+        doc.text(ln,txtX,cy);cy+=_descLH;
+      });
+      cy+=2;
     }
 
     // Piramide
@@ -2953,17 +2994,18 @@ function exportMisPDF(){
       secLabel('Piramide olfativa',txtX,cy);cy+=3.5;
       doc.setFontSize(7.5);doc.setFont(undefined,'normal');doc.setTextColor(...INK);
       const maxNotasH=10;
+      const _nLH=3.5;
       if(arr(p.top).length){
         const t=doc.splitTextToSize('S: '+arr(p.top).join(', '),txtW);
-        doc.text(t.slice(0,1),txtX,cy);cy+=3.5;
+        doc.text(t,txtX,cy);cy+=t.length*_nLH;
       }
       if(arr(p.cor).length){
         const t=doc.splitTextToSize('C: '+arr(p.cor).join(', '),txtW);
-        doc.text(t.slice(0,1),txtX,cy);cy+=3.5;
+        doc.text(t,txtX,cy);cy+=t.length*_nLH;
       }
       if(arr(p.fondo).length){
         const t=doc.splitTextToSize('F: '+arr(p.fondo).join(', '),txtW);
-        doc.text(t.slice(0,1),txtX,cy);cy+=3.5;
+        doc.text(t,txtX,cy);cy+=t.length*_nLH;
       }
       cy+=1;
     }
