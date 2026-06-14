@@ -1107,6 +1107,7 @@ tbody tr:hover td{background:var(--surf2)}
   <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px">
     <button class="btn btn-outline btn-sm" onclick="cargarDemoConfirm()">&#9654; Cargar datos demo</button>
     <button class="btn btn-outline btn-sm" onclick="vaciarYCargarGoogleConfirm()">&#127989; Limpiar y cargar desde Google</button>
+    <button class="btn btn-outline btn-sm" onclick="limpiarLocalStorage()" style="color:var(--err)">&#128465; Limpiar almacenamiento local</button>
   </div>
   <div id="demo-msg" style="font-size:11px;color:var(--mist);margin-bottom:8px"></div>
   <div class="sdiv"><span>Respaldo local (sin internet)</span></div>
@@ -1381,6 +1382,13 @@ function loadDB(){
 function saveDB(){localStorage.setItem('aura_db',JSON.stringify(DB));}
 let DB=loadDB();
 let NID=Math.max(100,...(DB.products||[]).map(p=>p.id),...(DB.inventory||[]).map(i=>i.id),...(DB.sales||[]).map(s=>s.id),...(DB.purchases||[]).map(p=>p.id),...(DB.providers||[]).map(p=>p.id),...(DB.clients||[]).map(c=>c.id),...(DB.pedidos||[]).map(p=>p.id))+1;
+
+// Migrate legacy: initialize missing collections and fields
+if(!DB.pedidos)DB.pedidos=[];
+// Normalize purchases: tipoCompra default
+if(DB.purchases)(DB.purchases).forEach(c=>{if(!c.tipoCompra)c.tipoCompra='inventario';});
+// Persist migrated DB immediately
+saveDB();
 
 // Migrate legacy: add imgs/img_main_id if missing
 DB.products.forEach(p=>{
@@ -2840,6 +2848,24 @@ const MIS_LABELS={genero:'Género',marca:'Marca árabe',nombre:'Nombre',familia:
 // WA_FIELDS — separate preferences for WhatsApp sharing (independent of MIS_FIELDS)
 const WA_FIELDS={genero:true,marca:true,nombre:true,familia:true,uso:true,precio:true,descripcion:true,inspiracion:true,perfume_principal:true,temporada:false,concentracion:false,duracion:false,proyeccion:false,intensidad:false,notas:false};
 
+
+function limpiarLocalStorage(){
+  if(!confirm('¿Limpiar todos los datos locales? Esto eliminará los datos del navegador. Después deberás Cargar desde Google para recuperar tus datos.'))return;
+  localStorage.removeItem('aura_db');
+  DB=loadDB();
+  NID=Math.max(100,...(DB.products||[]).map(p=>p.id),...(DB.inventory||[]).map(i=>i.id),...(DB.sales||[]).map(s=>s.id),...(DB.purchases||[]).map(p=>p.id),...(DB.providers||[]).map(p=>p.id),...(DB.clients||[]).map(c=>c.id),...(DB.pedidos||[]).map(p=>p.id))+1;
+  saveDB();
+  ['fq-familia-msd','fq-uso-msd','fq-marca-msd','fq-genero-msd','fq-inspo-msd',
+   'fq-top-msd','fq-cor-msd','fq-fondo-msd','fq-dur-msd','fq-proy-msd','fq-intens-msd','fq-temp-msd',
+   'mq-familia-msd','mq-uso-msd','mq-marca-msd','mq-genero-msd','mq-inspo-msd',
+   'mq-top-msd','mq-cor-msd','mq-fondo-msd','mq-dur-msd','mq-proy-msd','mq-intens-msd','mq-temp-msd',
+   'iv-prod-msd','iv-marca-msd','iv-tipo-msd','iv-pres-msd'].forEach(id=>{
+    const el=$$(id);if(el){el.innerHTML='';delete el._onChange;delete el._placeholder;}
+  });
+  renderCatalog();calcAlerts();renderInv();renderPedidos();
+  toastMsg('Almacenamiento local limpiado','ok');
+  const m=$$('demo-msg');if(m)m.textContent='Local storage limpiado. Usa Cargar desde Google para recuperar tus datos.';
+}
 
 function cargarDemoConfirm(){
   if(!confirm('Cargar los datos de demostracion? Esto REEMPLAZARA todos los datos actuales en la app (no afecta Google Sheets).'))return;
