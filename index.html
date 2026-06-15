@@ -1538,8 +1538,8 @@ async function loadFromGoogle(){
     if('clientes'   in d) DB.clients   = d.clientes  ||[];
     if('proveedores'in d) DB.providers =(d.proveedores||[]).map(normalizeProv);
     if('compras'    in d) DB.purchases =(d.compras   ||[]).map(normalizeCompra);
-    if(d.paquetes&&d.paquetes.length)    DB.packages  =d.paquetes.map(normalizePkg);
-    if(d.pagos_prov&&d.pagos_prov.length)DB.payments_prov=d.pagos_prov;
+    if('paquetes'   in d) DB.packages      =(d.paquetes   ||[]).map(normalizePkg);
+    if('pagos_prov' in d) DB.payments_prov  =d.pagos_prov  ||[];
     if(d.listas_columnar&&Object.keys(d.listas_columnar).length){
       // New columnar format from Sheets
       Object.keys(d.listas_columnar).forEach(k=>{if(d.listas_columnar[k].length)LISTS[k]=d.listas_columnar[k];});
@@ -1670,19 +1670,20 @@ function normalizeVenta(v){
 }
 function normalizeProv(p){
   return {id:p.id,nombre:p.nombre||'',tel:p.tel||'',concepto:p.concepto||'',
-    total:num(p.total),pagado:num(p.pagado),tipo:p.tipo||'compra',tipoCompra:p.tipoCompra||'inventario',
+    total:num(p.total),pagado:num(p.pagado),tipo:p.tipo||'compra',
     historial:parseJSON(p.historial,[])};
 }
 function normalizeCompra(c){
-  return {...c,
+  const norm={...c,
     uds:num(c.uds),costo:num(c.costo),total:num(c.total),
     fecha:normalizeDate(c.fecha||''),
     fechaRec:c.fechaRec&&String(c.fechaRec).trim()!==''?normalizeDate(c.fechaRec):null,
     motivoDiff:c.motivoDiff||'',
     estado:c.estado||'pendiente',
-    anticipo:num(c.anticipo||0),
-    anticipo_forma:c.anticipo_forma||'',
     confirmaciones:(parseJSON(c.confirmaciones,[])||[]).map(x=>({...x,fecha:normalizeDate(x.fecha||'')}))  };
+  // Eliminar campos anticipo del objeto compra — el anticipo vive en historial_prov
+  delete norm.anticipo; delete norm.anticipo_forma;
+  return norm;
 }
 function normalizePkg(pk){
   let fi='',ff='';
@@ -2851,17 +2852,21 @@ const WA_FIELDS={genero:true,marca:true,nombre:true,familia:true,uso:true,precio
 
 function limpiarLocalStorage(){
   if(!confirm('¿Limpiar todos los datos locales? Esto eliminará los datos del navegador. Después deberás Cargar desde Google para recuperar tus datos.'))return;
-  localStorage.removeItem('aura_db');
-  DB=loadDB();
-  NID=Math.max(100,...(DB.products||[]).map(p=>p.id),...(DB.inventory||[]).map(i=>i.id),...(DB.sales||[]).map(s=>s.id),...(DB.purchases||[]).map(p=>p.id),...(DB.providers||[]).map(p=>p.id),...(DB.clients||[]).map(c=>c.id),...(DB.pedidos||[]).map(p=>p.id))+1;
-  saveDB();
+  // Asignar DB vacío directamente — NO llamar loadDB() porque retornaría datos demo
+  DB={products:[],inventory:[],sales:[],clients:[],providers:[],purchases:[],packages:[],pedidos:[],payments_prov:[]};
+  NID=101;
+  saveDB(); // persistir el vacío en localStorage
+  // Resetear todos los paneles MSD
   ['fq-familia-msd','fq-uso-msd','fq-marca-msd','fq-genero-msd','fq-inspo-msd',
    'fq-top-msd','fq-cor-msd','fq-fondo-msd','fq-dur-msd','fq-proy-msd','fq-intens-msd','fq-temp-msd',
    'mq-familia-msd','mq-uso-msd','mq-marca-msd','mq-genero-msd','mq-inspo-msd',
    'mq-top-msd','mq-cor-msd','mq-fondo-msd','mq-dur-msd','mq-proy-msd','mq-intens-msd','mq-temp-msd',
-   'iv-prod-msd','iv-marca-msd','iv-tipo-msd','iv-pres-msd'].forEach(id=>{
+   'iv-prod-msd','iv-marca-msd','iv-tipo-msd','iv-pres-msd',
+   'r-inv-prod-msd','r-inv-marca-msd','r-inv-tipo-msd','r-inv-pres-msd'].forEach(id=>{
     const el=$$(id);if(el){el.innerHTML='';delete el._onChange;delete el._placeholder;}
   });
+  // Resetear flags de secciones para que los defaults se re-apliquen al navegar
+  _initDone={};
   renderCatalog();calcAlerts();renderInv();renderPedidos();
   toastMsg('Almacenamiento local limpiado','ok');
   const m=$$('demo-msg');if(m)m.textContent='Local storage limpiado. Usa Cargar desde Google para recuperar tus datos.';
@@ -4886,8 +4891,6 @@ function renderCalPagos(){
   const ant=parseFloat(($$('v-ant')||{}).value)||0;
   const _vAntForma=($$('v-ant-forma')?.value||'').trim();
   if(ant>0&&!_vAntForma){toastMsg('Selecciona la forma de pago del anticipo','err');return;}
-  // All validations passed — disable button now
-  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
   const quinc=parseFloat(($$('v-quinc')||{}).value)||200;
   const fprimer=cv('v-fprimer')||isoOffset(15);
   const saldo=total-ant;
@@ -4936,6 +4939,8 @@ async function saveVenta(){
   const obs=cv('v-obs')||'';
   const fprimer=cv('v-fprimer')||isoOffset(15);
 
+  if(_btn$$){_btn$$.disabled=true;_btn$$.textContent='Guardando…';}
+  try{
   if(prodSel.startsWith('pkg:')){
     const pkgId=parseInt(prodSel.split(':')[1]);const pkg=DB.packages.find(x=>x.id===pkgId);if(!pkg)return;
     const faltantes=[];
@@ -4965,7 +4970,8 @@ async function saveVenta(){
   sv('v-cli','');sv('v-prod','');sv('v-uds','1');sv('v-desc','0');sv('v-ant','0');
   renderVentas();calcAlerts();
   toastMsg('Venta registrada','ok');
-  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}
+  saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));
+  }finally{if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Registrar venta';}}
 }
 
 
@@ -5683,7 +5689,10 @@ async function saveProv(editId){
     DB.providers.push({id:NID++,nombre:n,tel:cv('pv-tel'),concepto:cv('pv-concepto'),total,pagado,tipo:cv('pv-tipo'),historial:[]});
     toastMsg('Proveedor guardado','ok');
   }
-  syncProviderTotals();closeM('m-prov');renderProv();saveDB();markPending();saveToGoogle().catch(e=>console.warn(e));  if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}
+  try{
+    syncProviderTotals();closeM('m-prov');renderProv();saveDB();markPending();
+    saveToGoogle().catch(e=>console.warn(e));
+  }finally{if(_btn$$){_btn$$.disabled=false;_btn$$.textContent='Guardar';}}
 }
 
 
@@ -6123,12 +6132,9 @@ function renderReporte(){
       if(tipoPagoFilt&&tipoPagoFilt!=='abono')return false;
       return true;
     }).flatMap(pv=>(pv.historial||[]).filter(h=>h.tipo==='abono').map(h=>({fecha:h.fecha,nombre:pv.nombre,monto:h.monto,tipo:'abono',forma:h.forma||'',tipoProd:'',presProd:'',motivo:h.motivo||''})));
-    // Include anticipos from compras in the movement list
-    const _ant=DB.purchases.filter(c=>(c.anticipo||0)>0&&c.provId&&(!provId||c.provId===provId)
-      &&(!desde||dateToISO(c.fecha)>=desde)&&(!hasta||dateToISO(c.fecha)<=hasta))
-      .map(c=>({fecha:c.fecha,nombre:c.proveedor||'',monto:c.anticipo,tipo:'anticipo',
-        forma:c.anticipo_forma||'',tipoProd:c.tipo||'',presProd:c.pres||'',motivo:'Anticipo: '+c.producto}));
-    const _all10=[..._rcv,..._abn,..._ant]
+    // Anticipos ya están incluidos en historial_prov como tipo:'abono' al crear la compra
+    // No se suma _ant por separado para evitar doble conteo
+    const _all10=[..._rcv,..._abn]
       .filter(r=>(!desde||dateToISO(r.fecha)>=desde)&&(!hasta||dateToISO(r.fecha)<=hasta))
       .sort((a,b)=>(dateToISO(b.fecha)||'').localeCompare(dateToISO(a.fecha)||'')).slice(0,50);
     thead.innerHTML='<tr><th onclick="srtTbl(this)" style="cursor:pointer">Fecha</th><th onclick="srtTbl(this)" style="cursor:pointer">Proveedor</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Forma pago</th><th onclick="srtTbl(this)" style="cursor:pointer">Tipo prod.</th><th onclick="srtTbl(this)" style="cursor:pointer">Pres.</th><th onclick="srtTbl(this)" style="text-align:right;cursor:pointer">Monto</th><th>Detalle</th></tr>';
