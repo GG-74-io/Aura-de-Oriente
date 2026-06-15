@@ -4451,12 +4451,7 @@ async function saveCompra(){
       c.prodId=prodId;c.producto=nombreProducto;
       c.tipo=cv('cp-tipo')||'';c.pres=cv('cp-pres')||'';
       c.uds=uds;c.costo=costo;c.total=total;c.notas=cv('cp-notas');
-      // Nota: anticipo no se guarda en el objeto compra — ya fue grabado en historial prov
-      const nuevoAnticipo=parseFloat(($$('cp-anticipo')||{}).value)||0;
-      const nuevaForma=cv('cp-anticipo-forma')||'';
-      if(nuevoAnticipo!==c.anticipo)cambios.push('Anticipo: '+fmt$(c.anticipo||0)+'→'+fmt$(nuevoAnticipo));
-      if(nuevaForma!==(c.anticipo_forma||''))cambios.push('Forma anticipo: '+(c.anticipo_forma||'—')+'→'+nuevaForma);
-      c.anticipo=nuevoAnticipo;c.anticipo_forma=nuevaForma;
+      // Anticipo vive solo en historial_prov — no se almacena en el objeto compra
       if(!c.historial)c.historial=[];
       c.historial.push({fecha:TODAY,tipo:'edicion',cambios:cambios.join(', ')||'Sin cambios en campos clave',motivo:razon});
     }else{
